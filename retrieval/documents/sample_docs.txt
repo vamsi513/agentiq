@@ -1,0 +1,69 @@
+===DOC_START===
+Title: Introduction to Transformer Architecture
+Source: https://arxiv.org/abs/1706.03762
+
+The Transformer architecture, introduced in "Attention Is All You Need" (Vaswani et al., 2017), revolutionized natural language processing by replacing recurrent networks entirely with self-attention mechanisms. Unlike RNNs and LSTMs that process tokens sequentially, Transformers process all tokens in parallel, enabling vastly better GPU utilization. The core building block is the multi-head self-attention layer, which computes three projections — Query, Key, and Value — for each token and uses scaled dot-product attention to produce context-aware representations. Positional encodings are added to the input embeddings to inject sequential order information that the attention mechanism itself cannot capture. The original architecture uses 6 encoder layers and 6 decoder layers, each with 512-dimensional embeddings and 8 attention heads, totaling 65 million parameters. This design became the blueprint for virtually every major language model developed since 2017.
+===DOC_END===
+
+===DOC_START===
+Title: BERT — Bidirectional Encoder Representations from Transformers
+Source: https://arxiv.org/abs/1810.04805
+
+BERT (Devlin et al., 2018) introduced bidirectional pre-training for language models, a significant departure from GPT's left-to-right training objective. BERT uses a masked language modeling (MLM) objective: 15% of input tokens are randomly masked, and the model learns to predict them using context from both directions. A second pre-training task, Next Sentence Prediction (NSP), trains the model to understand relationships between sentence pairs. BERT-Base contains 110M parameters (12 layers, 768 hidden size, 12 attention heads); BERT-Large has 340M parameters. Fine-tuned BERT set new state-of-the-art results on 11 NLP benchmarks at publication time, including SQuAD question answering (93.2 F1) and GLUE benchmark (80.5 score). The model's bidirectionality proved especially powerful for tasks requiring full sentence context, such as named entity recognition and reading comprehension.
+===DOC_END===
+
+===DOC_START===
+Title: Large Language Models and Emergent Capabilities
+Source: https://arxiv.org/abs/2206.07682
+
+Large language models (LLMs) exhibit emergent capabilities — abilities that appear suddenly at certain scale thresholds and were not present in smaller models. Wei et al. (2022) documented over 130 such emergent abilities across models ranging from GPT-3 (175B) to PaLM (540B). Notable emergent capabilities include multi-step arithmetic reasoning, chain-of-thought problem solving, code generation, and few-shot learning from in-context examples. The scaling hypothesis suggests these capabilities arise from the model internalizing more complex statistical patterns as parameter count and training data increase. However, emergent capabilities introduce unpredictability: developers cannot reliably anticipate which capabilities will appear at which scale. This has prompted new evaluation paradigms such as BIG-Bench, which includes 200+ tasks specifically designed to probe capabilities that benchmark saturation renders invisible in standard evaluations.
+===DOC_END===
+
+===DOC_START===
+Title: Retrieval-Augmented Generation (RAG)
+Source: https://arxiv.org/abs/2005.11401
+
+Retrieval-Augmented Generation (RAG), introduced by Lewis et al. (2020), combines parametric knowledge stored in LLM weights with non-parametric knowledge retrieved from an external document store. The architecture has two components: a dense retriever (typically DPR — Dense Passage Retrieval) that encodes queries and documents into a shared embedding space, and a generative model (originally BART) that conditions its output on both the query and the retrieved passages. RAG addresses a critical limitation of standalone LLMs: their knowledge is frozen at training time and they cannot access proprietary, recent, or domain-specific information. On open-domain QA benchmarks, RAG outperformed both pure parametric models and traditional IR systems. Modern RAG systems use vector databases (FAISS, Pinecone, Weaviate) for scalable similarity search and decoder-only LLMs (GPT-4, Llama) for generation, enabling real-time grounding with citations.
+===DOC_END===
+
+===DOC_START===
+Title: Reinforcement Learning from Human Feedback (RLHF)
+Source: https://arxiv.org/abs/2203.02155
+
+Reinforcement Learning from Human Feedback (RLHF) is the alignment technique that transformed raw pre-trained LLMs into instruction-following assistants. The process has three stages: (1) supervised fine-tuning (SFT) on high-quality human-written demonstrations of desired behavior; (2) reward model training, where human raters rank model outputs and a separate neural network learns to predict those rankings; (3) PPO (Proximal Policy Optimization) fine-tuning of the SFT model against the reward model's scores. InstructGPT (Ouyang et al., 2022), the precursor to ChatGPT, demonstrated that a 1.3B RLHF-tuned model was preferred by human raters over a 175B model trained only with next-token prediction. RLHF is now standard practice for all major commercial LLMs including GPT-4, Claude, and Gemini, though it requires expensive human annotation and can introduce reward hacking if the reward model is misspecified.
+===DOC_END===
+
+===DOC_START===
+Title: Vector Embeddings and Semantic Search
+Source: https://arxiv.org/abs/1908.10084
+
+Vector embeddings map discrete objects — words, sentences, documents, images — into continuous high-dimensional spaces where geometric proximity reflects semantic similarity. Sentence-BERT (Reimers & Gurevych, 2019) extended BERT to produce fixed-size sentence embeddings by adding a pooling layer and fine-tuning on Natural Language Inference datasets with a siamese network objective. The resulting embeddings support efficient semantic search: given a query embedding, approximate nearest-neighbor (ANN) algorithms like FAISS (Facebook AI Similarity Search) can retrieve the most similar documents from millions of candidates in milliseconds. FAISS supports multiple index types: Flat (exact brute-force), IVF (inverted file, fast approximate), and HNSW (hierarchical navigable small world graphs). For production RAG systems, the IVFFlat or IVFPQ indices offer the best speed-recall trade-off. Embedding models are evaluated on the MTEB (Massive Text Embedding Benchmark), which covers 56 datasets across 8 retrieval, clustering, and classification tasks.
+===DOC_END===
+
+===DOC_START===
+Title: LangGraph — Stateful Multi-Agent Orchestration
+Source: https://blog.langchain.dev/langgraph
+
+LangGraph is an open-source library from LangChain that extends the LangChain Expression Language to support stateful, multi-step, and cyclical agent workflows as explicit directed graphs. Unlike LangChain's linear chains or simple AgentExecutor loops, LangGraph models agent behavior as a StateGraph where nodes are Python functions and edges are either deterministic or conditional. State is a TypedDict that flows through the graph; each node receives the full state and returns a partial update. LangGraph's key features include: (1) built-in persistence via checkpointers (MemorySaver for in-memory, SqliteSaver for disk), enabling multi-turn conversation memory and fault-tolerant long-running workflows; (2) human-in-the-loop support through interrupt_before and interrupt_after hooks; (3) streaming at both the node level and token level; (4) support for subgraphs, parallel fan-out, and map-reduce patterns. LangGraph is used in production by teams building complex agentic systems that require reliable state management across multiple LLM calls.
+===DOC_END===
+
+===DOC_START===
+Title: Chain-of-Thought Prompting in Large Language Models
+Source: https://arxiv.org/abs/2201.11903
+
+Chain-of-thought (CoT) prompting, introduced by Wei et al. (2022), elicits multi-step reasoning in large language models by including example reasoning chains in the few-shot prompt. Instead of showing only input-output pairs, CoT prompts show the intermediate reasoning steps that lead to the answer. For example, a math word problem prompt includes the full arithmetic reasoning trace before the final numerical answer. Experiments on PaLM (540B) showed CoT prompting improved accuracy on GSM8K grade-school math from 17.9% to 56.9% — a 3× improvement. Zero-shot CoT (Kojima et al., 2022) discovered that simply appending "Let's think step by step" to a question elicits similar reasoning chains without any examples. Subsequent work introduced self-consistency (sample multiple reasoning paths and majority-vote), tree-of-thought (explore multiple reasoning branches), and least-to-most prompting (decompose complex problems into simpler sub-problems). These techniques are now standard in production prompt engineering for tasks involving arithmetic, logic, and multi-hop reasoning.
+===DOC_END===
+
+===DOC_START===
+Title: GPT-4 Technical Report — Capabilities and Safety
+Source: https://arxiv.org/abs/2303.08774
+
+GPT-4 (OpenAI, 2023) is a large multimodal model capable of processing both text and image inputs to produce text outputs. It achieves human-level performance on a wide range of professional and academic benchmarks: scoring in the top 10% on the Uniform Bar Exam (Score: 298/400), 88th percentile on the LSAT, and 90th percentile on the SAT Math section. GPT-4 uses RLHF and a new Constitutional AI-inspired safety training process, and is evaluated with a new metric called "hallucination rate" that measures factual accuracy against verified sources. The model shows significant improvements in steerability — following complex, nuanced system prompts — compared to GPT-3.5. OpenAI reports that GPT-4 was trained on a combination of publicly available internet data and licensed datasets, with a knowledge cutoff of September 2021. GPT-4 API powers applications across legal, medical, educational, and coding domains, with function calling and JSON mode enabling reliable structured output for agentic applications.
+===DOC_END===
+
+===DOC_START===
+Title: Agentic AI Systems — Design Patterns and Challenges
+Source: https://arxiv.org/abs/2309.07864
+
+Agentic AI systems are LLM-powered applications that can plan, use tools, and take multi-step actions to accomplish goals specified in natural language. Unlike single-shot prompting, agents operate in a loop: perceive state, reason about actions, execute a tool, observe the result, and repeat until the task is complete. Common architectural patterns include ReAct (Reasoning + Acting), which interleaves chain-of-thought reasoning with tool calls; Plan-and-Execute, which separates high-level planning from low-level execution; and Reflection, which adds a self-critique step to identify and correct errors. Key challenges in production agentic systems include: hallucinated tool calls (the model invents non-existent APIs), compounding errors (mistakes in early steps propagate to later steps), infinite loops (no termination condition), and latency (each LLM + tool call adds 1–5 seconds of wall time). Mitigations include structured output validation (Pydantic), maximum step limits, explicit state tracking (LangGraph), and human-in-the-loop checkpoints for high-stakes actions.
+===DOC_END===
