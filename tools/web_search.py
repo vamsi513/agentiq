@@ -12,7 +12,7 @@ Get a key at: https://tavily.com
 """
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from config import settings

@@ -169,8 +169,9 @@ def retriever_node(state: AgentState) -> dict[str, Any]:
             )
 
         context = "\n\n---\n\n".join(context_parts)
-        logger.info("Retriever found %d chunks (top score=%.3f).", len(results), results[0]["score"])
-        return {"context": context, "sources": sources}
+        top_score = results[0]["score"]
+        logger.info("Retriever found %d chunks (top score=%.3f).", len(results), top_score)
+        return {"context": context, "sources": sources, "retrieval_score": top_score}
 
     except Exception as exc:
         logger.exception("Retriever error: %s", exc)
@@ -307,8 +308,12 @@ def generator_node(state: AgentState) -> dict[str, Any]:
         response = llm.invoke(history)
         answer = response.content
 
+        current_turn = state.get("turn_count", 0)
         logger.info("Generator produced answer (%d chars).", len(answer))
-        return {"messages": [AIMessage(content=answer)]}
+        return {
+            "messages": [AIMessage(content=answer)],
+            "turn_count": current_turn + 1,
+        }
 
     except Exception as exc:
         logger.exception("Generator LLM call failed: %s", exc)
@@ -316,4 +321,9 @@ def generator_node(state: AgentState) -> dict[str, Any]:
             "I encountered an error while generating a response. "
             "Please check your OpenAI API key and try again."
         )
-        return {"messages": [AIMessage(content=error_msg)]}
+        current_turn = state.get("turn_count", 0)
+        return {
+            "messages": [AIMessage(content=error_msg)],
+            "turn_count": current_turn + 1,
+            "error": str(exc),
+        }

@@ -5,11 +5,18 @@ Provides an async generator that runs the LangGraph agent and yields
 SSE-formatted chunks as the answer is produced.  The Streamlit frontend
 and any SSE-capable client can consume this stream directly.
 
-SSE event format (each chunk is a JSON-encoded StreamChunk):
+SSE event format (each chunk is a JSON-encoded payload):
     data: {"type": "token",   "data": "Hello"}\\n\\n
     data: {"type": "sources", "data": [...]}\\n\\n
     data: {"type": "done",    "data": null}\\n\\n
     data: {"type": "error",   "data": "message"}\\n\\n
+
+Key design decisions:
+- Token filtering uses ``metadata.langgraph_node`` (not event ``name``) to
+  identify which graph node produced each LLM token.
+- Sources are captured from the retriever/web_search node ``on_chain_end``
+  events, not from the generator (which only returns messages).
+- ``run_agent_sync`` uses ``graph.ainvoke()`` to avoid blocking the event loop.
 """
 
 import json
@@ -19,7 +26,6 @@ from typing import AsyncGenerator
 from langchain_core.messages import HumanMessage
 
 from agent.memory import get_thread_config
-from config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -39,34 +45,18 @@ def _sse(type_: str, data) -> str:
     return f"data: {payload}\n\n"
 
 
-async def stream_agent_response(
-    query: str,
-    session_id: str,
-) -> AsyncGenerator[str, None]:
+def _build_initial_state(query: str, session_id: str) -> dict:
     """
-    Run the AgentIQ graph and stream SSE chunks to the caller.
-
-    The generator yields in three phases:
-    1. ``token`` events — one per word/chunk of the generated answer.
-    2. ``sources`` event — full list of cited sources.
-    3. ``done`` event — signals end of stream.
-
-    On any error a single ``error`` event is yielded before the generator
-    returns, so the client always receives a terminal event.
+    Construct the initial AgentState dict for a new graph invocation.
 
     Args:
         query: User's question string.
-        session_id: Conversation session ID for MemorySaver threading.
+        session_id: Conversation session identifier.
 
-    Yields:
-        SSE-formatted strings ready to be written to the HTTP response.
+    Returns:
+        Complete initial state dict compatible with AgentState TypedDict.
     """
-    from agent.graph import get_graph
-
-    graph = get_graph()
-    config = get_thread_config(session_id)
-
-    initial_state = {
+    return {
         "messages": [HumanMessage(content=query)],
         "query": query,
         "context": "",
@@ -79,12 +69,44 @@ async def stream_agent_response(
         "metadata": {},
     }
 
-    logger.info("Streaming response for session=%s query='%.60s'", session_id, query)
+
+async def stream_agent_response(
+    query: str,
+    session_id: str,
+) -> AsyncGenerator[str, None]:
+    """
+    Run the AgentIQ graph and stream SSE chunks to the caller.
+
+    Event sequence:
+    1. ``token`` — one per LLM output token from the generator node.
+    2. ``sources`` — list of cited sources (after all tokens).
+    3. ``done``  — stream termination signal (always sent last).
+    4. ``error`` — on failure, followed immediately by ``done``.
+
+    Token detection uses ``metadata.langgraph_node == "generator"`` which is
+    the correct LangGraph 0.2.x field — NOT the top-level event ``name``.
+
+    Sources are captured from retriever/web_search ``on_chain_end`` output
+    dicts.  Generator output is intentionally excluded because it only
+    returns ``messages``, not sources.
+
+    Args:
+        query: User's question string.
+        session_id: Conversation session ID for MemorySaver threading.
+
+    Yields:
+        SSE-formatted strings ready to be written to the HTTP response.
+    """
+    from agent.graph import get_graph
+
+    graph = get_graph()
+    config = get_thread_config(session_id)
+    initial_state = _build_initial_state(query, session_id)
+
+    logger.info("Streaming response: session=%s query='%.60s'", session_id, query)
 
     try:
-        # astream_events gives us fine-grained token-level events
-        answer_chunks: list[str] = []
-        final_state: dict = {}
+        captured_sources: list = []
 
         async for event in graph.astream_events(
             initial_state,
@@ -92,43 +114,34 @@ async def stream_agent_response(
             version="v2",
         ):
             kind = event.get("event", "")
-            name = event.get("name", "")
 
-            # Stream tokens from the generator node's LLM call
-            if kind == "on_chat_model_stream" and "generator" in name:
-                chunk = event.get("data", {}).get("chunk")
-                if chunk and hasattr(chunk, "content") and chunk.content:
-                    token = chunk.content
-                    answer_chunks.append(token)
-                    yield _sse("token", token)
+            # ── Stream tokens from the generator node's LLM call ──────────────
+            # Use metadata.langgraph_node (not event name) to identify the node.
+            if kind == "on_chat_model_stream":
+                node_name = event.get("metadata", {}).get("langgraph_node", "")
+                if node_name == "generator":
+                    chunk = event.get("data", {}).get("chunk")
+                    if chunk and hasattr(chunk, "content") and chunk.content:
+                        yield _sse("token", chunk.content)
 
-            # Capture final state from generator node output
-            elif kind == "on_chain_end" and name == "generator":
-                output = event.get("data", {}).get("output", {})
-                if isinstance(output, dict):
-                    final_state = output
+            # ── Capture sources from retriever or web_search output ───────────
+            # Generator only returns messages — sources come from earlier nodes.
+            elif kind == "on_chain_end":
+                node_name = event.get("name", "")
+                if node_name in ("retriever", "web_search"):
+                    output = event.get("data", {}).get("output", {})
+                    if isinstance(output, dict) and output.get("sources"):
+                        captured_sources = output["sources"]
 
-        # If astream_events didn't yield tokens (direct path), run invoke
-        if not answer_chunks:
-            result = graph.invoke(initial_state, config=config)
-            messages = result.get("messages", [])
-            if messages:
-                answer = messages[-1].content
-                # Simulate streaming word by word
-                for word in answer.split(" "):
-                    yield _sse("token", word + " ")
-            final_state = result
-
-        # Emit sources
-        sources = final_state.get("sources", [])
-        if sources:
-            yield _sse("sources", sources)
+        # Emit collected sources then terminate
+        if captured_sources:
+            yield _sse("sources", captured_sources)
 
         yield _sse("done", None)
-        logger.info("Stream complete for session=%s", session_id)
+        logger.info("Stream complete: session=%s", session_id)
 
     except Exception as exc:
-        logger.exception("Streaming error for session=%s: %s", session_id, exc)
+        logger.exception("Streaming error: session=%s error=%s", session_id, exc)
         yield _sse("error", f"Agent error: {type(exc).__name__}. Please try again.")
         yield _sse("done", None)
 
@@ -138,9 +151,11 @@ async def run_agent_sync(
     session_id: str,
 ) -> dict:
     """
-    Run the agent graph synchronously and return the full result dict.
+    Run the agent graph and return the full result dict (non-streaming).
 
-    Used by the non-streaming /chat endpoint and Streamlit's fallback path.
+    Uses ``graph.ainvoke()`` (async) to avoid blocking FastAPI's event loop.
+    Calling the synchronous ``graph.invoke()`` inside an async function would
+    stall all other requests — ainvoke is the correct approach.
 
     Args:
         query: User's question string.
@@ -154,22 +169,11 @@ async def run_agent_sync(
 
     graph = get_graph()
     config = get_thread_config(session_id)
-
-    initial_state = {
-        "messages": [HumanMessage(content=query)],
-        "query": query,
-        "context": "",
-        "sources": [],
-        "route_decision": "direct",
-        "session_id": session_id,
-        "turn_count": 0,
-        "retrieval_score": 0.0,
-        "error": None,
-        "metadata": {},
-    }
+    initial_state = _build_initial_state(query, session_id)
 
     try:
-        result = graph.invoke(initial_state, config=config)
+        # ainvoke is the async-safe version of invoke — never blocks event loop
+        result = await graph.ainvoke(initial_state, config=config)
         messages = result.get("messages", [])
         answer = messages[-1].content if messages else "No response generated."
 
@@ -185,7 +189,10 @@ async def run_agent_sync(
     except Exception as exc:
         logger.exception("Agent sync run failed: %s", exc)
         return {
-            "answer": f"Error: {type(exc).__name__} — please check your API keys and try again.",
+            "answer": (
+                f"Error: {type(exc).__name__} — "
+                "please check your API keys and try again."
+            ),
             "sources": [],
             "route_decision": "direct",
             "session_id": session_id,

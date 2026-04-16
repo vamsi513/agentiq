@@ -16,9 +16,7 @@ Retrieval returns the top-K chunks ranked by cosine similarity, together
 with their metadata and similarity scores.
 """
 
-import json
 import logging
-import os
 import pickle
 from pathlib import Path
 from typing import Any
