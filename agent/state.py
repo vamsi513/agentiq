@@ -37,6 +37,14 @@ class AgentState(TypedDict):
                         by the conditional edge to pick the next node.
         session_id: Stable identifier for the conversation session.
                     Used by MemorySaver to thread checkpoints.
+        turn_count: Number of completed conversation turns in this
+                    session.  Incremented by the generator node after
+                    each response.
+        retrieval_score: Cosine similarity score of the top retrieved
+                         chunk (0.0–1.0).  Set by the retriever node;
+                         0.0 when web search or direct path is used.
+        error: Human-readable error message if any node failed during
+               the current turn.  None when everything succeeded.
         metadata: Optional free-form dict for any extra per-run data
                   (e.g., latency measurements, token counts).
     """
@@ -47,4 +55,7 @@ class AgentState(TypedDict):
     sources: list[dict[str, Any]]
     route_decision: str
     session_id: str
+    turn_count: int
+    retrieval_score: float
+    error: Optional[str]
     metadata: Optional[dict[str, Any]]
