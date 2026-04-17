@@ -1,0 +1,302 @@
+[
+  {
+    "id": 1,
+    "question": "What is the Transformer architecture and why did it replace RNNs?",
+    "ground_truth": "The Transformer architecture uses self-attention mechanisms instead of recurrence, allowing parallel processing of all tokens simultaneously. This leads to much better GPU utilization compared to RNNs and LSTMs which process tokens sequentially. It was introduced in 'Attention Is All You Need' by Vaswani et al. in 2017.",
+    "context_type": "retrieval"
+  },
+  {
+    "id": 2,
+    "question": "How does multi-head self-attention work in Transformers?",
+    "ground_truth": "Multi-head self-attention computes three projections — Query, Key, and Value — for each token and uses scaled dot-product attention to produce context-aware representations. Running multiple attention heads in parallel allows the model to attend to information from different representation subspaces simultaneously.",
+    "context_type": "retrieval"
+  },
+  {
+    "id": 3,
+    "question": "What is BERT and how does bidirectional training differ from GPT?",
+    "ground_truth": "BERT uses masked language modeling (MLM) where 15% of tokens are randomly masked and the model predicts them using context from both directions. GPT uses left-to-right training only. This bidirectionality makes BERT especially powerful for tasks requiring full sentence context like NER and reading comprehension.",
+    "context_type": "retrieval"
+  },
+  {
+    "id": 4,
+    "question": "What are emergent capabilities in large language models?",
+    "ground_truth": "Emergent capabilities are abilities that appear suddenly at certain model scale thresholds and were not present in smaller models. Examples include multi-step arithmetic reasoning, chain-of-thought problem solving, code generation, and few-shot learning. They arise from the model internalizing more complex statistical patterns as parameter count and training data increase.",
+    "context_type": "retrieval"
+  },
+  {
+    "id": 5,
+    "question": "Explain Retrieval-Augmented Generation (RAG) and its key components.",
+    "ground_truth": "RAG combines parametric knowledge in LLM weights with non-parametric knowledge retrieved from an external document store. It has two components: a dense retriever that encodes queries and documents into a shared embedding space, and a generative model that conditions its output on both the query and retrieved passages. It addresses LLMs' frozen knowledge limitation.",
+    "context_type": "retrieval"
+  },
+  {
+    "id": 6,
+    "question": "What is RLHF and what are its three training stages?",
+    "ground_truth": "RLHF (Reinforcement Learning from Human Feedback) has three stages: (1) supervised fine-tuning on high-quality human demonstrations, (2) reward model training where human raters rank model outputs, and (3) PPO fine-tuning of the SFT model against reward model scores. It transformed raw pre-trained LLMs into instruction-following assistants.",
+    "context_type": "retrieval"
+  },
+  {
+    "id": 7,
+    "question": "How does FAISS enable efficient semantic search?",
+    "ground_truth": "FAISS (Facebook AI Similarity Search) enables efficient semantic search by storing document embeddings in specialized index structures. It supports multiple index types: Flat for exact brute-force, IVF for fast approximate search, and HNSW for hierarchical navigable small world graphs. Queries are encoded into vectors and approximate nearest-neighbor search finds the most similar documents in milliseconds.",
+    "context_type": "retrieval"
+  },
+  {
+    "id": 8,
+    "question": "What is LangGraph and how does it differ from LangChain's AgentExecutor?",
+    "ground_truth": "LangGraph extends LangChain to support stateful, multi-step, and cyclical agent workflows as explicit directed graphs. Unlike AgentExecutor's simple loops, LangGraph models agent behavior as a StateGraph where nodes are Python functions and edges are deterministic or conditional. It provides built-in persistence via checkpointers, human-in-the-loop support, and streaming at both node and token levels.",
+    "context_type": "retrieval"
+  },
+  {
+    "id": 9,
+    "question": "What is chain-of-thought prompting and how does it improve LLM reasoning?",
+    "ground_truth": "Chain-of-thought prompting includes intermediate reasoning steps in few-shot examples rather than just input-output pairs. On PaLM (540B), CoT improved GSM8K math accuracy from 17.9% to 56.9%. Zero-shot CoT discovered that appending 'Let's think step by step' elicits similar reasoning chains without examples.",
+    "context_type": "retrieval"
+  },
+  {
+    "id": 10,
+    "question": "What professional benchmarks did GPT-4 achieve human-level performance on?",
+    "ground_truth": "GPT-4 achieved human-level performance on the Uniform Bar Exam (top 10%, score 298/400), 88th percentile on the LSAT, and 90th percentile on the SAT Math section. It uses RLHF and Constitutional AI-inspired safety training.",
+    "context_type": "retrieval"
+  },
+  {
+    "id": 11,
+    "question": "What are the key challenges in production agentic AI systems?",
+    "ground_truth": "Key challenges include hallucinated tool calls where the model invents non-existent APIs, compounding errors where mistakes propagate through steps, infinite loops without termination conditions, and latency from multiple LLM and tool calls. Mitigations include structured output validation with Pydantic, maximum step limits, explicit state tracking with LangGraph, and human-in-the-loop checkpoints.",
+    "context_type": "retrieval"
+  },
+  {
+    "id": 12,
+    "question": "How many parameters does BERT-Base have compared to BERT-Large?",
+    "ground_truth": "BERT-Base contains 110M parameters with 12 layers, 768 hidden size, and 12 attention heads. BERT-Large has 340M parameters. Fine-tuned BERT set new state-of-the-art results on 11 NLP benchmarks at publication time.",
+    "context_type": "retrieval"
+  },
+  {
+    "id": 13,
+    "question": "What is the ReAct pattern in agentic AI systems?",
+    "ground_truth": "ReAct (Reasoning + Acting) is an architectural pattern that interleaves chain-of-thought reasoning with tool calls. The agent reasons about what action to take, executes the tool, observes the result, and repeats until the task is complete. It is one of the most common patterns in production agentic systems.",
+    "context_type": "retrieval"
+  },
+  {
+    "id": 14,
+    "question": "What is the MTEB benchmark used to evaluate?",
+    "ground_truth": "MTEB (Massive Text Embedding Benchmark) covers 56 datasets across 8 retrieval, clustering, and classification tasks. It is used to evaluate embedding models and compare their performance on diverse NLP tasks.",
+    "context_type": "retrieval"
+  },
+  {
+    "id": 15,
+    "question": "What does L2 normalization do to vectors before FAISS indexing?",
+    "ground_truth": "L2 normalization scales vectors to unit length so that inner-product similarity equals cosine similarity. This allows using the faster IndexFlatIP (inner product) index while still measuring cosine similarity between query and document vectors.",
+    "context_type": "retrieval"
+  },
+  {
+    "id": 16,
+    "question": "What is sentence-BERT and how does it differ from BERT for sentence similarity?",
+    "ground_truth": "Sentence-BERT extends BERT to produce fixed-size sentence embeddings by adding a pooling layer and fine-tuning on Natural Language Inference datasets with a siamese network objective. Unlike BERT which requires both sentences to be fed together, Sentence-BERT independently encodes sentences enabling efficient semantic search.",
+    "context_type": "retrieval"
+  },
+  {
+    "id": 17,
+    "question": "What is the Next Sentence Prediction task in BERT pre-training?",
+    "ground_truth": "Next Sentence Prediction (NSP) trains BERT to understand relationships between sentence pairs. Given two sentences A and B, the model predicts whether B naturally follows A in a document. This trains BERT on inter-sentence coherence, which is useful for tasks like question answering and natural language inference.",
+    "context_type": "retrieval"
+  },
+  {
+    "id": 18,
+    "question": "What is the Plan-and-Execute pattern in agentic systems?",
+    "ground_truth": "Plan-and-Execute separates high-level planning from low-level execution. The planner creates a multi-step plan for the task, and a separate executor carries out each step. This separation allows the planner to reason about the full task without being distracted by execution details.",
+    "context_type": "retrieval"
+  },
+  {
+    "id": 19,
+    "question": "How does MemorySaver work in LangGraph?",
+    "ground_truth": "MemorySaver stores the full graph state as an in-memory checkpoint keyed by thread_id and checkpoint_id. Each user session gets a stable thread_id so that multi-turn conversation history is preserved across graph invocations within the same process. It can be swapped with SqliteSaver or PostgresSaver for persistence across restarts.",
+    "context_type": "retrieval"
+  },
+  {
+    "id": 20,
+    "question": "What is the BIG-Bench benchmark designed to evaluate?",
+    "ground_truth": "BIG-Bench includes 200+ tasks specifically designed to probe LLM capabilities that benchmark saturation renders invisible in standard evaluations. It was introduced to evaluate emergent capabilities and tasks where existing benchmarks are insufficient.",
+    "context_type": "retrieval"
+  },
+  {
+    "id": 21,
+    "question": "What is the difference between IVFFlat and HNSW FAISS index types?",
+    "ground_truth": "IVFFlat (Inverted File Flat) partitions vectors into clusters and searches only nearby clusters, offering fast approximate search with good recall. HNSW (Hierarchical Navigable Small World) builds a multi-layer graph structure enabling logarithmic-time search. For production RAG, IVFFlat and IVFPQ offer the best speed-recall trade-off.",
+    "context_type": "retrieval"
+  },
+  {
+    "id": 22,
+    "question": "What is self-consistency prompting?",
+    "ground_truth": "Self-consistency samples multiple reasoning paths from the model for the same question and majority-votes the final answer. It improves over single chain-of-thought by leveraging the diversity of reasoning paths, particularly for arithmetic and logical reasoning tasks.",
+    "context_type": "retrieval"
+  },
+  {
+    "id": 23,
+    "question": "How did InstructGPT demonstrate RLHF's effectiveness?",
+    "ground_truth": "InstructGPT showed that a 1.3B RLHF-tuned model was preferred by human raters over a 175B model trained only with next-token prediction. This demonstrated that alignment technique quality can compensate for a 100x difference in model size.",
+    "context_type": "retrieval"
+  },
+  {
+    "id": 24,
+    "question": "What is positional encoding in Transformers and why is it needed?",
+    "ground_truth": "Positional encodings are added to input embeddings to inject sequential order information that the attention mechanism itself cannot capture. Since self-attention processes all tokens in parallel without any inherent notion of position, positional encodings provide the model with information about the relative or absolute position of tokens in the sequence.",
+    "context_type": "retrieval"
+  },
+  {
+    "id": 25,
+    "question": "What is least-to-most prompting?",
+    "ground_truth": "Least-to-most prompting decomposes complex problems into simpler sub-problems and solves them in order from least to most complex. Each sub-problem's solution is used as context for the next, enabling the model to solve problems that require multiple reasoning steps.",
+    "context_type": "retrieval"
+  },
+  {
+    "id": 26,
+    "question": "What is Python used for in data science?",
+    "ground_truth": "Python is widely used in data science for data manipulation with pandas, numerical computing with NumPy, machine learning with scikit-learn and PyTorch, data visualization with matplotlib and seaborn, and building end-to-end ML pipelines. Its readable syntax and rich ecosystem make it the dominant language in the field.",
+    "context_type": "direct"
+  },
+  {
+    "id": 27,
+    "question": "What is the difference between supervised and unsupervised learning?",
+    "ground_truth": "Supervised learning trains on labeled data where the correct output is known, learning to map inputs to outputs. Unsupervised learning finds patterns in unlabeled data without predefined outputs, used for clustering, dimensionality reduction, and anomaly detection.",
+    "context_type": "direct"
+  },
+  {
+    "id": 28,
+    "question": "What is gradient descent and how does it train neural networks?",
+    "ground_truth": "Gradient descent minimizes the loss function by iteratively adjusting parameters in the direction of the negative gradient. In neural networks, backpropagation computes the gradient of the loss with respect to each parameter using the chain rule, and gradient descent updates the weights to reduce prediction error.",
+    "context_type": "direct"
+  },
+  {
+    "id": 29,
+    "question": "What is overfitting in machine learning and how can it be prevented?",
+    "ground_truth": "Overfitting occurs when a model learns the training data too well, including noise and random fluctuations, and fails to generalize to new data. Prevention techniques include regularization (L1/L2), dropout, early stopping, cross-validation, data augmentation, and reducing model complexity.",
+    "context_type": "direct"
+  },
+  {
+    "id": 30,
+    "question": "What is the purpose of the softmax function in neural networks?",
+    "ground_truth": "Softmax converts a vector of raw scores (logits) into a probability distribution where all values sum to 1. It is typically used in the output layer of classification networks to produce class probabilities, and in attention mechanisms to produce attention weights.",
+    "context_type": "direct"
+  },
+  {
+    "id": 31,
+    "question": "What is transfer learning and why is it important?",
+    "ground_truth": "Transfer learning reuses a model trained on one task as the starting point for a model on a different but related task. It is important because it dramatically reduces the amount of labeled data and compute needed to achieve good performance, especially in NLP where large pre-trained models like BERT and GPT are fine-tuned on downstream tasks.",
+    "context_type": "direct"
+  },
+  {
+    "id": 32,
+    "question": "What is the vanishing gradient problem in deep neural networks?",
+    "ground_truth": "The vanishing gradient problem occurs when gradients become extremely small as they propagate through many layers during backpropagation, making it hard to train early layers. Solutions include ReLU activations, batch normalization, residual connections (ResNets), and LSTM/GRU gates in recurrent networks.",
+    "context_type": "direct"
+  },
+  {
+    "id": 33,
+    "question": "Explain the difference between precision and recall in classification.",
+    "ground_truth": "Precision is the fraction of predicted positives that are actually positive (TP / (TP + FP)). Recall is the fraction of actual positives that were correctly predicted (TP / (TP + FN)). There is usually a trade-off: increasing one often decreases the other. F1-score is the harmonic mean balancing both.",
+    "context_type": "direct"
+  },
+  {
+    "id": 34,
+    "question": "What is the attention mechanism and how does it relate to memory in neural networks?",
+    "ground_truth": "Attention allows a model to focus on relevant parts of the input when producing each output, acting as a soft differentiable memory lookup. The model learns to compute attention weights over all input positions and takes a weighted sum of their values, enabling it to selectively access information regardless of sequence length.",
+    "context_type": "direct"
+  },
+  {
+    "id": 35,
+    "question": "What is the difference between bagging and boosting ensemble methods?",
+    "ground_truth": "Bagging (Bootstrap Aggregating) trains multiple models independently on random subsets of data and averages their predictions, reducing variance. Boosting trains models sequentially where each model focuses on correcting the errors of the previous, reducing bias. Random Forest uses bagging; XGBoost and AdaBoost use boosting.",
+    "context_type": "direct"
+  },
+  {
+    "id": 36,
+    "question": "What is tokenization in NLP and what are common approaches?",
+    "ground_truth": "Tokenization splits text into units (tokens) that the model processes. Common approaches include word-level tokenization, character-level tokenization, and subword tokenization like Byte-Pair Encoding (BPE) used by GPT and WordPiece used by BERT. Subword methods balance vocabulary size with handling of rare and unseen words.",
+    "context_type": "direct"
+  },
+  {
+    "id": 37,
+    "question": "What is the difference between a generative and a discriminative model?",
+    "ground_truth": "Discriminative models learn the boundary between classes directly, modeling P(y|x). Generative models learn the joint distribution P(x,y) and can generate new data samples. Examples: logistic regression and SVMs are discriminative; GANs, VAEs, and language models are generative.",
+    "context_type": "direct"
+  },
+  {
+    "id": 38,
+    "question": "What is layer normalization and how does it differ from batch normalization?",
+    "ground_truth": "Layer normalization normalizes across the feature dimension for each individual sample, making it independent of batch size. Batch normalization normalizes across the batch dimension. Layer normalization is preferred in Transformers because it works well with variable-length sequences and is more stable in small-batch settings.",
+    "context_type": "direct"
+  },
+  {
+    "id": 39,
+    "question": "What is a knowledge graph and how is it used in AI?",
+    "ground_truth": "A knowledge graph is a structured representation of entities and the relationships between them, stored as triples (subject, predicate, object). In AI it is used for question answering, semantic search, recommendation systems, and as an external knowledge source for LLMs to improve factual accuracy.",
+    "context_type": "direct"
+  },
+  {
+    "id": 40,
+    "question": "What is the difference between zero-shot, one-shot, and few-shot learning?",
+    "ground_truth": "Zero-shot learning asks the model to perform a task with no examples, relying on instruction following. One-shot provides exactly one example. Few-shot provides a small number of examples (typically 2-10) in the prompt. GPT-3 demonstrated strong few-shot learning by completing tasks from in-context examples without weight updates.",
+    "context_type": "direct"
+  },
+  {
+    "id": 41,
+    "question": "What is cosine similarity and when is it used in NLP?",
+    "ground_truth": "Cosine similarity measures the cosine of the angle between two vectors, equal to their dot product divided by the product of their magnitudes. It ranges from -1 to 1, where 1 means identical direction. In NLP it is used to measure semantic similarity between sentence embeddings, and in vector databases for nearest-neighbor retrieval.",
+    "context_type": "direct"
+  },
+  {
+    "id": 42,
+    "question": "What is the purpose of dropout regularization?",
+    "ground_truth": "Dropout randomly sets a fraction of neuron outputs to zero during training, forcing the network to learn redundant representations and preventing co-adaptation of neurons. This reduces overfitting and acts as an implicit ensemble of exponentially many network architectures.",
+    "context_type": "direct"
+  },
+  {
+    "id": 43,
+    "question": "What is semantic search and how does it differ from keyword search?",
+    "ground_truth": "Semantic search retrieves documents based on the meaning and intent of the query rather than exact keyword matches. It encodes both query and documents into dense vector embeddings and retrieves those with highest cosine similarity. Keyword search uses term frequency and inverted indexes, missing synonyms and paraphrases that semantic search handles naturally.",
+    "context_type": "direct"
+  },
+  {
+    "id": 44,
+    "question": "What is the purpose of residual connections in deep networks?",
+    "ground_truth": "Residual connections (skip connections) add the input of a layer directly to its output, creating a shortcut path for gradients. They solve the vanishing gradient problem in very deep networks by allowing gradients to flow directly through the skip path. Introduced in ResNet, they are also used in every Transformer layer.",
+    "context_type": "direct"
+  },
+  {
+    "id": 45,
+    "question": "What is prompt engineering and why does it matter?",
+    "ground_truth": "Prompt engineering is the practice of carefully designing input prompts to elicit desired outputs from LLMs without changing model weights. It matters because LLM performance varies dramatically with prompt phrasing. Techniques include few-shot examples, chain-of-thought instructions, role-playing system prompts, and structured output formatting.",
+    "context_type": "direct"
+  },
+  {
+    "id": 46,
+    "question": "What is the difference between encoder-only, decoder-only, and encoder-decoder Transformer models?",
+    "ground_truth": "Encoder-only models (BERT) process the full input bidirectionally and are best for classification and extraction tasks. Decoder-only models (GPT) generate text autoregressively left-to-right and excel at generation. Encoder-decoder models (T5, BART) encode the input then decode the output, suited for seq2seq tasks like translation and summarization.",
+    "context_type": "direct"
+  },
+  {
+    "id": 47,
+    "question": "What is vector quantization in the context of machine learning?",
+    "ground_truth": "Vector quantization maps continuous vectors to a finite set of discrete codebook vectors (centroids). It is used in FAISS IVFPQ indices for compression, in VQ-VAE for discrete latent representations, and in audio codecs. It reduces memory and speeds up similarity search at the cost of some precision.",
+    "context_type": "direct"
+  },
+  {
+    "id": 48,
+    "question": "What is the role of the feed-forward network in a Transformer layer?",
+    "ground_truth": "Each Transformer layer has a position-wise feed-forward network (FFN) applied identically to each position after the attention sublayer. It consists of two linear transformations with a ReLU or GELU activation in between. The FFN is thought to store factual knowledge learned during pre-training and has a larger hidden dimension (typically 4x the model dimension).",
+    "context_type": "direct"
+  },
+  {
+    "id": 49,
+    "question": "What is hallucination in LLMs and how can RAG help reduce it?",
+    "ground_truth": "Hallucination is when an LLM generates confident but factually incorrect information. RAG reduces hallucination by grounding the model's output in retrieved documents, providing factual context the model must use when generating its answer. Requiring the model to cite sources makes hallucinated facts easier to detect.",
+    "context_type": "direct"
+  },
+  {
+    "id": 50,
+    "question": "What is the difference between fine-tuning and in-context learning?",
+    "ground_truth": "Fine-tuning updates the model's weights on task-specific labeled data, permanently changing the model. In-context learning (few-shot prompting) provides examples in the prompt at inference time without changing weights, relying on the model's pre-trained ability to generalize from examples. Fine-tuning typically achieves higher performance; in-context learning is faster and requires no training data.",
+    "context_type": "direct"
+  }
+]
