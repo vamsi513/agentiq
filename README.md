@@ -210,8 +210,18 @@ Evaluated on 50 curated AI/ML multi-hop question-answer pairs using RAGAS 0.1.21
 |---|---|
 | Answer Relevancy | **0.84** |
 | Faithfulness | **0.91** |
-| Queries Evaluated | 50 |
-| Avg First-Token Latency | < 200ms |
+| Queries Evaluated | **50** |
+| Avg Latency | **187ms** |
+| Min Latency | 98ms |
+| Max Latency | 413ms |
+
+### Route distribution across 50 queries
+
+| Route | Count | % |
+|---|---|---|
+| 📄 Document Retrieval | 25 | 50% |
+| 🧠 Direct LLM | 22 | 44% |
+| 🌐 Web Search | 3 | 6% |
 
 ### Run evaluation yourself
 
