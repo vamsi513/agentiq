@@ -11,7 +11,7 @@
 
 ## 🚀 Live Demo
 
-**[AgentIQ on Streamlit Cloud](your-url-here)**
+**[AgentIQ on Streamlit Cloud](https://agentiq.streamlit.app)**
 
 ---
 
@@ -294,3 +294,7 @@ MIT License — see [LICENSE](LICENSE) for details.
 ## Author
 
 Built by [Vamsi](https://github.com/vamsi513) as a production-quality agentic AI portfolio project.
+
+---
+
+*Deployed on [Streamlit Cloud](https://agentiq.streamlit.app) · Source on [GitHub](https://github.com/vamsi513/agentiq)*
