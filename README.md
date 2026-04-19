@@ -51,11 +51,14 @@
 ## Features
 
 - **Multi-step agentic reasoning** with LangGraph StateGraph — router, retriever, web search, and generator nodes wired with conditional edges
-- **Hybrid retrieval** — semantic FAISS search over a local AI/ML research corpus + live Tavily web search for current information
+- **Hybrid retrieval** — semantic FAISS search over a 30-document AI/ML research corpus + live Tavily web search for current information
 - **Persistent conversation memory** with LangGraph MemorySaver checkpointing across all turns in a session
 - **Real-time streaming responses** via FastAPI Server-Sent Events (SSE) with token-level output
 - **RAGAS evaluation** — answer relevance **0.84**, faithfulness **0.91** across 50 multi-hop QA pairs
-- **Fully deployed** on Streamlit Cloud with a dark-themed chat interface, route badges, and collapsible source citations
+- **PDF upload** — users can upload their own PDFs; text is extracted, chunked, and indexed into FAISS in real time
+- **Session rate limiting** — 20-query cap per session with a live progress bar in the sidebar
+- **Response time counter** — every answer shows its wall-clock latency as a badge
+- **Fully deployed** on Streamlit Cloud with a dark-themed chat interface, route badges, response time badges, and collapsible source citations
 
 ---
 
@@ -67,7 +70,7 @@
 | LLM Abstraction | LangChain 0.3.7 |
 | Language Model | OpenAI GPT-4o-mini |
 | Embeddings | sentence-transformers all-MiniLM-L6-v2 |
-| Vector Store | FAISS (faiss-cpu 1.9.0) |
+| Vector Store | FAISS (faiss-cpu 1.13.0) |
 | Web Search | Tavily Search API |
 | Backend API | FastAPI 0.115.4 + uvicorn |
 | Streaming | Server-Sent Events (SSE) |
@@ -179,7 +182,7 @@ agentiq/
 │   ├── vectorstore.py            # FAISS index build, save, load, query
 │   ├── embeddings.py             # sentence-transformers wrapper
 │   └── documents/
-│       └── sample_docs.txt       # 10 AI/ML research documents
+│       └── sample_docs.txt       # 30 AI/ML research documents
 ├── tools/
 │   ├── __init__.py
 │   └── web_search.py             # Tavily API wrapper with error handling
@@ -203,6 +206,8 @@ agentiq/
 ---
 
 ## Evaluation Results
+
+> **Note:** Scores below were measured on the original 10-document corpus. The corpus has since been expanded to 30 documents. Re-run `python -m evaluation.eval_runner` to get updated scores.
 
 Evaluated on 50 curated AI/ML multi-hop question-answer pairs using RAGAS 0.1.21.
 

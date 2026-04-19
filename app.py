@@ -178,7 +178,8 @@ def _handle_pdf_upload(uploaded_file) -> None:
                     chunks_text.append(chunk)
                     start += chunk_size - overlap
 
-                title = uploaded_file.name.replace(".pdf", "")
+                from pathlib import Path as _Path
+                title = _Path(uploaded_file.name).stem
                 metadata = [
                     {"title": title, "source": f"Uploaded PDF: {uploaded_file.name}"}
                     for _ in chunks_text
@@ -487,9 +488,11 @@ def _stream_agent_response(
 
     while True:
         try:
-            msg_type, payload = token_queue.get(timeout=60)  # 60s hard timeout
+            msg_type, payload = token_queue.get(timeout=120)  # 120s hard timeout
         except queue.Empty:
-            logger.error("Token queue timed out after 60s.")
+            logger.error("Token queue timed out after 120s.")
+            accumulated = accumulated or "Request timed out. Please try again."
+            text_placeholder.markdown(accumulated)
             break
 
         if msg_type == "token":
@@ -611,5 +614,4 @@ def main() -> None:
         )
 
 
-if __name__ == "__main__" or True:
-    main()
+main()

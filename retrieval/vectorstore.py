@@ -18,6 +18,7 @@ with their metadata and similarity scores.
 
 import logging
 import pickle
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -199,6 +200,7 @@ def _load_index(index_path: Path) -> tuple[faiss.Index, list[dict[str, Any]]]:
 
 _faiss_index: faiss.Index | None = None
 _faiss_chunks: list[dict[str, Any]] | None = None
+_index_lock = threading.Lock()   # protects both _faiss_index and _faiss_chunks
 
 
 def get_vectorstore() -> tuple[faiss.Index, list[dict[str, Any]]]:
@@ -269,19 +271,19 @@ def add_documents_to_vectorstore(texts: list[str], metadata: list[dict[str, Any]
             embeddings_model.embed_documents(texts), dtype=np.float32
         )
         faiss.normalize_L2(vectors)
-        _faiss_index.add(vectors)  # type: ignore[union-attr]
 
-        # Append metadata aligned with the new index positions
-        for i, (text, meta) in enumerate(zip(texts, metadata)):
-            _faiss_chunks.append(  # type: ignore[union-attr]
-                {
-                    "title": meta.get("title", "Uploaded Document"),
-                    "source": meta.get("source", ""),
-                    "content": text,
-                    "chunk_index": i,
-                    "doc_index": -1,  # -1 signals runtime-added document
-                }
-            )
+        with _index_lock:
+            _faiss_index.add(vectors)  # type: ignore[union-attr]
+            for i, (text, meta) in enumerate(zip(texts, metadata)):
+                _faiss_chunks.append(  # type: ignore[union-attr]
+                    {
+                        "title": meta.get("title", "Uploaded Document"),
+                        "source": meta.get("source", ""),
+                        "content": text,
+                        "chunk_index": i,
+                        "doc_index": -1,  # -1 signals runtime-added document
+                    }
+                )
 
         logger.info("Added %d chunks to in-memory FAISS index.", len(texts))
         return len(texts)

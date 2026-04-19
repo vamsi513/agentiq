@@ -12,6 +12,7 @@ Run locally:
 
 import logging
 import uuid
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -23,40 +24,16 @@ from config import settings
 
 logger = logging.getLogger(__name__)
 
-# ── FastAPI app ───────────────────────────────────────────────────────────────
 
-app = FastAPI(
-    title="AgentIQ API",
-    description=(
-        "Multi-step agentic research assistant powered by LangGraph, "
-        "FAISS retrieval, and Tavily web search."
-    ),
-    version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc",
-)
+# ── Lifespan (replaces deprecated @app.on_event) ─────────────────────────────
 
-# ── CORS ──────────────────────────────────────────────────────────────────────
-# Allow all origins for local dev and Streamlit Cloud.
-# Tighten this to specific origins in a production deployment.
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
-# ── Startup event ─────────────────────────────────────────────────────────────
-
-@app.on_event("startup")
-async def startup_event() -> None:
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     """
     Pre-warm the agent graph and FAISS index on server startup.
 
-    This avoids a cold-start delay on the first request by loading the
-    embedding model and compiling the LangGraph graph eagerly.
+    Using the lifespan context manager (FastAPI >= 0.93) instead of the
+    deprecated @app.on_event("startup") decorator.
     """
     logger.info("AgentIQ API starting up…")
     try:
@@ -72,6 +49,38 @@ async def startup_event() -> None:
         logger.info("FAISS vectorstore pre-loaded successfully.")
     except Exception as exc:
         logger.warning("FAISS pre-load failed (will build on first request): %s", exc)
+
+    yield  # Application runs here
+
+    logger.info("AgentIQ API shutting down.")
+
+
+# ── FastAPI app ───────────────────────────────────────────────────────────────
+
+app = FastAPI(
+    title="AgentIQ API",
+    description=(
+        "Multi-step agentic research assistant powered by LangGraph, "
+        "FAISS retrieval, and Tavily web search."
+    ),
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    lifespan=lifespan,
+)
+
+# ── CORS ──────────────────────────────────────────────────────────────────────
+# allow_credentials=True is incompatible with allow_origins=["*"] per the CORS
+# spec — browsers reject credentialed requests to wildcard origins.
+# We set allow_credentials=False (the safe default for a public API).
+# Tighten allow_origins to specific domains in a production deployment.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type", "Authorization"],
+)
 
 
 # ── Health endpoint ───────────────────────────────────────────────────────────

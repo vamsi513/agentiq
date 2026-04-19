@@ -182,9 +182,8 @@ class TestRetrieverNode:
             }
         ]
 
-        with patch("agent.nodes.query_vectorstore", mock_results) as _:
-            with patch("retrieval.vectorstore.query_vectorstore", return_value=mock_results):
-                result = retriever_node(_base_state())
+        with patch("retrieval.vectorstore.query_vectorstore", return_value=mock_results):
+            result = retriever_node(_base_state())
 
         assert "context" in result
         assert "sources" in result
