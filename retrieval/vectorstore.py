@@ -251,29 +251,35 @@ def query_vectorstore(
         Sorted by descending similarity score.
     """
     k = top_k or settings.top_k_retrieval
-    index, chunks = get_vectorstore()
 
-    embeddings_model = get_embeddings()
-    query_vec = np.array(
-        [embeddings_model.embed_query(query)], dtype=np.float32
-    )
-    faiss.normalize_L2(query_vec)
+    try:
+        index, chunks = get_vectorstore()
 
-    scores, indices = index.search(query_vec, k)
-
-    results: list[dict[str, Any]] = []
-    for score, idx in zip(scores[0], indices[0]):
-        if idx < 0:
-            continue
-        chunk = chunks[idx]
-        results.append(
-            {
-                "title": chunk["title"],
-                "source": chunk["source"],
-                "content": chunk["content"],
-                "score": float(score),
-            }
+        embeddings_model = get_embeddings()
+        query_vec = np.array(
+            [embeddings_model.embed_query(query)], dtype=np.float32
         )
+        faiss.normalize_L2(query_vec)
 
-    logger.debug("Retrieved %d chunks for query: %.60s", len(results), query)
-    return results
+        scores, indices = index.search(query_vec, k)
+
+        results: list[dict[str, Any]] = []
+        for score, idx in zip(scores[0], indices[0]):
+            if idx < 0:
+                continue
+            chunk = chunks[idx]
+            results.append(
+                {
+                    "title": chunk["title"],
+                    "source": chunk["source"],
+                    "content": chunk["content"],
+                    "score": float(score),
+                }
+            )
+
+        logger.debug("Retrieved %d chunks for query: %.60s", len(results), query)
+        return results
+
+    except Exception as exc:
+        logger.exception("query_vectorstore failed for query '%.60s': %s", query, exc)
+        return []

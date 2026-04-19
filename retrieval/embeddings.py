@@ -12,7 +12,7 @@ the vectorstore code.
 """
 
 import logging
-from typing import List
+from typing import List  # noqa: UP006 — kept for sentence-transformers 2.7 compatibility
 
 from sentence_transformers import SentenceTransformer
 

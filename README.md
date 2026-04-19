@@ -11,7 +11,7 @@
 
 ## 🚀 Live Demo
 
-**[AgentIQ on Streamlit Cloud](https://agentiq.streamlit.app)**
+**[AgentIQ on Streamlit Cloud](https://agentiq-qgjmzy665qcpysoctz7app.streamlit.app)**
 
 ---
 
@@ -297,4 +297,4 @@ Built by [Vamsi](https://github.com/vamsi513) as a production-quality agentic AI
 
 ---
 
-*Deployed on [Streamlit Cloud](https://agentiq.streamlit.app) · Source on [GitHub](https://github.com/vamsi513/agentiq)*
+*Deployed on [Streamlit Cloud](https://agentiq-qgjmzy665qcpysoctz7app.streamlit.app) · Source on [GitHub](https://github.com/vamsi513/agentiq)*
