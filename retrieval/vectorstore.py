@@ -233,6 +233,64 @@ def get_vectorstore() -> tuple[faiss.Index, list[dict[str, Any]]]:
     return _faiss_index, _faiss_chunks
 
 
+def add_documents_to_vectorstore(texts: list[str], metadata: list[dict[str, Any]]) -> int:
+    """
+    Add new document chunks to the in-memory FAISS index at runtime.
+
+    Used by the PDF upload feature to index uploaded documents without
+    rebuilding the entire index from scratch.  Changes are not persisted
+    to disk — they exist only for the lifetime of the current process.
+
+    Args:
+        texts:    List of text strings to embed and add.
+        metadata: List of metadata dicts (same length as texts) with keys
+                  ``title``, ``source``.  Other keys are optional.
+
+    Returns:
+        Number of vectors successfully added.
+
+    Raises:
+        ValueError: If texts and metadata lengths differ.
+    """
+    if len(texts) != len(metadata):
+        raise ValueError("texts and metadata must have the same length.")
+
+    if not texts:
+        return 0
+
+    global _faiss_index, _faiss_chunks
+
+    # Ensure the index is loaded/built before adding
+    get_vectorstore()
+
+    try:
+        embeddings_model = get_embeddings()
+        vectors = np.array(
+            embeddings_model.embed_documents(texts), dtype=np.float32
+        )
+        faiss.normalize_L2(vectors)
+        _faiss_index.add(vectors)  # type: ignore[union-attr]
+
+        # Append metadata aligned with the new index positions
+        for i, (text, meta) in enumerate(zip(texts, metadata)):
+            _faiss_chunks.append(  # type: ignore[union-attr]
+                {
+                    "title": meta.get("title", "Uploaded Document"),
+                    "source": meta.get("source", ""),
+                    "content": text,
+                    "chunk_index": i,
+                    "doc_index": -1,  # -1 signals runtime-added document
+                }
+            )
+
+        logger.info("Added %d chunks to in-memory FAISS index.", len(texts))
+        return len(texts)
+
+    except Exception as exc:
+        logger.exception("add_documents_to_vectorstore failed: %s", exc)
+        return 0
+
+
 def query_vectorstore(
     query: str,
     top_k: int | None = None,
