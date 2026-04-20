@@ -61,7 +61,7 @@ from config import settings  # noqa: E402
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="AgentIQ",
-    page_icon="🔍",
+    page_icon=None,
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -117,7 +117,7 @@ def _ensure_index() -> None:
         except Exception as exc:
             logger.exception("FAISS index build failed: %s", exc)
             st.error(
-                "⚠️ Document index could not be loaded. "
+                "Document index could not be loaded. "
                 "Retrieval will be unavailable — web search and direct answers still work."
             )
             st.session_state.index_ready = True  # Don't retry on every rerun
@@ -144,7 +144,7 @@ def _handle_pdf_upload(uploaded_file) -> None:
 
     file_key = (uploaded_file.name, uploaded_file.size)
     if file_key in st.session_state.indexed_pdfs:
-        st.sidebar.success(f"✅ Already indexed: **{uploaded_file.name}**")
+        st.sidebar.success(f"Already indexed: **{uploaded_file.name}**")
         return
 
     with st.sidebar:
@@ -163,7 +163,7 @@ def _handle_pdf_upload(uploaded_file) -> None:
                         pages_text.append(text.strip())
 
                 if not pages_text:
-                    st.error("⚠️ Could not extract text from this PDF.")
+                    st.error("Could not extract text from this PDF.")
                     return
 
                 full_text = "\n\n".join(pages_text)
@@ -188,8 +188,8 @@ def _handle_pdf_upload(uploaded_file) -> None:
                 n_added = add_documents_to_vectorstore(chunks_text, metadata)
                 st.session_state.indexed_pdfs.add(file_key)
                 st.success(
-                    f"✅ **{uploaded_file.name}** indexed — "
-                    f"{len(reader.pages)} pages · {n_added} chunks added to retrieval."
+                    f"**{uploaded_file.name}** indexed — "
+                    f"{len(reader.pages)} pages, {n_added} chunks added to retrieval."
                 )
                 logger.info(
                     "PDF indexed: '%s' — %d pages, %d chunks.",
@@ -199,26 +199,26 @@ def _handle_pdf_upload(uploaded_file) -> None:
                 )
 
             except ImportError:
-                st.error("⚠️ pypdf is not installed. Run: pip install pypdf")
+                st.error("pypdf is not installed. Run: pip install pypdf")
             except Exception as exc:
                 logger.exception("PDF indexing failed: %s", exc)
-                st.error(f"⚠️ Failed to index PDF: {type(exc).__name__}")
+                st.error(f"Failed to index PDF: {type(exc).__name__}")
 
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 def _render_sidebar() -> None:
     """Render the sidebar with app info, model config, session stats, and PDF upload."""
     with st.sidebar:
-        st.title("🔍 AgentIQ")
+        st.title("AgentIQ")
         st.caption("Multi-Step Agentic Research Assistant")
         st.divider()
 
         st.subheader("About")
         st.markdown(
             "AgentIQ autonomously routes your question between:\n"
-            "- 📄 **Document Retrieval** — local AI/ML research corpus\n"
-            "- 🌐 **Web Search** — live Tavily results\n"
-            "- 🧠 **Direct LLM** — GPT-4o-mini knowledge\n\n"
+            "- **Document Retrieval** — local AI/ML research corpus\n"
+            "- **Web Search** — live Tavily results\n"
+            "- **Direct LLM** — GPT-4o-mini knowledge\n\n"
             "Powered by **LangGraph** · **FAISS** · **Tavily**"
         )
         st.divider()
@@ -232,12 +232,12 @@ def _render_sidebar() -> None:
         # API key status indicators
         st.subheader("API Status")
         if settings.is_openai_configured():
-            st.success("OpenAI ✓")
+            st.success("OpenAI key configured")
         else:
             st.error("OpenAI key missing")
 
         if settings.is_tavily_configured():
-            st.success("Tavily ✓")
+            st.success("Tavily key configured")
         else:
             st.warning("Tavily key missing (web search disabled)")
 
@@ -255,7 +255,7 @@ def _render_sidebar() -> None:
         )
         st.progress(min(used / _MAX_QUERIES_PER_SESSION, 1.0))
 
-        if st.button("🗑️ Clear conversation", use_container_width=True):
+        if st.button("Clear conversation", use_container_width=True):
             st.session_state.messages = []
             st.session_state.session_id = str(uuid.uuid4())
             st.session_state.query_count = 0
@@ -264,7 +264,7 @@ def _render_sidebar() -> None:
         st.divider()
 
         # ── PDF Upload ────────────────────────────────────────────────────────
-        st.subheader("📎 Upload PDF")
+        st.subheader("Upload PDF")
         st.caption("Index your own document for retrieval.")
         uploaded_file = st.file_uploader(
             "Upload a PDF",
@@ -281,9 +281,9 @@ def _render_sidebar() -> None:
 
 # ── Route badge ───────────────────────────────────────────────────────────────
 _ROUTE_BADGES = {
-    "retrieval":  ("📄", "Document Retrieval", "#7C3AED"),
-    "web_search": ("🌐", "Web Search",         "#0891B2"),
-    "direct":     ("🧠", "Direct LLM",         "#059669"),
+    "retrieval":  ("Document Retrieval", "#7C3AED"),
+    "web_search": ("Web Search",         "#0891B2"),
+    "direct":     ("Direct LLM",         "#059669"),
 }
 
 
@@ -297,13 +297,11 @@ def _route_badge(route: str) -> str:
     Returns:
         HTML string rendering a coloured badge.
     """
-    icon, label, color = _ROUTE_BADGES.get(
-        route, ("🧠", "Direct LLM", "#059669")
-    )
+    label, color = _ROUTE_BADGES.get(route, ("Direct LLM", "#059669"))
     return (
         f'<span style="background:{color};color:white;padding:2px 10px;'
         f'border-radius:12px;font-size:0.75rem;font-weight:600;">'
-        f"{icon} {label}</span>"
+        f"{label}</span>"
     )
 
 
@@ -324,7 +322,7 @@ def _time_badge(elapsed_ms: int) -> str:
     return (
         f'<span style="background:#374151;color:#D1D5DB;padding:2px 8px;'
         f'border-radius:12px;font-size:0.72rem;margin-left:6px;">'
-        f"⏱ {label}</span>"
+        f"{label}</span>"
     )
 
 
@@ -340,7 +338,7 @@ def _render_sources(sources: list[dict[str, Any]]) -> None:
     if not sources:
         return
 
-    with st.expander(f"📚 Sources ({len(sources)})", expanded=False):
+    with st.expander(f"Sources ({len(sources)})", expanded=False):
         for i, src in enumerate(sources, start=1):
             title = src.get("title", "Untitled")
             url = src.get("url", "")
@@ -507,7 +505,7 @@ def _stream_agent_response(
             route = payload
 
         elif msg_type == "error":
-            accumulated = f"❌ Error: {payload}"
+            accumulated = f"Error: {payload}"
             text_placeholder.markdown(accumulated)
 
         elif msg_type == "done":
@@ -536,7 +534,7 @@ def main() -> None:
     _ensure_index()
 
     # ── Header ────────────────────────────────────────────────────────────────
-    st.title("🔍 AgentIQ")
+    st.title("AgentIQ")
     st.caption(
         "Ask anything — I'll route your question to the best source: "
         "document retrieval, live web search, or direct LLM knowledge."
@@ -559,7 +557,7 @@ def main() -> None:
         # ── Rate limit check ──────────────────────────────────────────────────
         if st.session_state.query_count >= _MAX_QUERIES_PER_SESSION:
             st.warning(
-                f"⚠️ You've reached the session limit of {_MAX_QUERIES_PER_SESSION} queries. "
+                f"You have reached the session limit of {_MAX_QUERIES_PER_SESSION} queries. "
                 "Click **Clear conversation** in the sidebar to start a new session."
             )
             st.stop()
@@ -584,7 +582,7 @@ def main() -> None:
                 )
             except Exception as exc:
                 logger.exception("Unexpected error during streaming: %s", exc)
-                answer = f"❌ Unexpected error: {type(exc).__name__}. Please try again."
+                answer = f"Unexpected error: {type(exc).__name__}. Please try again."
                 sources = []
                 route = "direct"
                 elapsed_ms = 0

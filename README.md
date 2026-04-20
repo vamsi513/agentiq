@@ -9,7 +9,7 @@
 
 ---
 
-## 🚀 Live Demo
+## Live Demo
 
 **[AgentIQ on Streamlit Cloud](https://agentiq-qgjmzy665qcpysoctz7app.streamlit.app)**
 
@@ -224,9 +224,9 @@ Evaluated on 50 curated AI/ML multi-hop question-answer pairs using RAGAS 0.1.21
 
 | Route | Count | % |
 |---|---|---|
-| 📄 Document Retrieval | 25 | 50% |
-| 🧠 Direct LLM | 22 | 44% |
-| 🌐 Web Search | 3 | 6% |
+| Document Retrieval | 25 | 50% |
+| Direct LLM | 22 | 44% |
+| Web Search | 3 | 6% |
 
 ### Run evaluation yourself
 
