@@ -160,8 +160,13 @@ async def run_evaluation(max_queries: int = 50) -> dict[str, Any]:
         answer = result.get("answer", "")
         sources = result.get("sources", [])
 
-        # Build context list from sources for RAGAS
-        ctx_list = [s.get("content", "") for s in sources if s.get("content")]
+        # Build context list for RAGAS from the *full* context the generator
+        # actually used (state["context"]), not the 200-char truncated
+        # previews in `sources[].content` (those exist only for citation
+        # display in the API response and understate what the model saw,
+        # which would make faithfulness look artificially low).
+        full_context = result.get("context", "")
+        ctx_list = [c for c in full_context.split("\n\n---\n\n") if c.strip()]
         if not ctx_list:
             ctx_list = ["No context retrieved."]
 

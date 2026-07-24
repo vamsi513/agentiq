@@ -180,6 +180,7 @@ async def run_agent_sync(
         return {
             "answer": answer,
             "sources": result.get("sources", []),
+            "context": result.get("context", ""),
             "route_decision": result.get("route_decision", "direct"),
             "session_id": session_id,
             "turn_count": result.get("turn_count", 0),
