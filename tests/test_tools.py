@@ -10,8 +10,12 @@ Tests cover:
 All Tavily API calls are mocked — no real network requests are made.
 """
 
+import sys
+
 import pytest
 from unittest.mock import MagicMock, patch
+
+import tools.web_search  # noqa: F401 — ensures tools.web_search is registered in sys.modules
 
 
 # ── WebSearchResult dataclass ─────────────────────────────────────────────────
@@ -85,7 +89,7 @@ class TestWebSearch:
 
     def test_returns_fallback_when_no_api_key(self):
         """Returns a single fallback result when TAVILY_API_KEY is not set."""
-        from tools import web_search as ws_module
+        ws_module = sys.modules["tools.web_search"]
 
         # Reset cached client so our patched settings take effect
         ws_module._client = None
@@ -101,7 +105,7 @@ class TestWebSearch:
 
     def test_returns_fallback_on_client_exception(self):
         """Returns fallback (does not raise) when TavilyClient.search throws."""
-        from tools import web_search as ws_module
+        ws_module = sys.modules["tools.web_search"]
 
         mock_client = MagicMock()
         mock_client.search.side_effect = ConnectionError("network error")
@@ -123,7 +127,7 @@ class TestWebSearch:
 
     def test_normalises_valid_api_response(self):
         """Normalises a realistic Tavily API response into expected dict shape."""
-        from tools import web_search as ws_module
+        ws_module = sys.modules["tools.web_search"]
 
         fake_response = {
             "results": [
@@ -163,7 +167,7 @@ class TestWebSearch:
 
     def test_returns_fallback_when_empty_results(self):
         """Returns fallback when Tavily returns an empty results list."""
-        from tools import web_search as ws_module
+        ws_module = sys.modules["tools.web_search"]
 
         mock_client = MagicMock()
         mock_client.search.return_value = {"results": []}
