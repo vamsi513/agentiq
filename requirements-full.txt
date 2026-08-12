@@ -1,0 +1,17 @@
+# AgentIQ — full requirements for local development
+# Includes optional backends not needed for Streamlit Cloud deployment.
+# Install with: pip install -r requirements.txt -r requirements-full.txt
+
+# ── Alternative Vector Stores ─────────────────────────────────────────────────
+pinecone-client>=4.1.2
+
+# ── LlamaIndex Document Loading & Retrieval ───────────────────────────────────
+llama-index-core>=0.11.0
+llama-index-embeddings-openai>=0.2.0
+
+# ── Fine-tuning (notebooks only) ──────────────────────────────────────────────
+peft>=0.10.0
+transformers>=4.40.0
+datasets>=2.20.0
+accelerate>=0.30.0
+trl>=0.8.0
