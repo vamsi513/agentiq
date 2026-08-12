@@ -1,0 +1,99 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agentiq-api
+  namespace: agentiq
+  labels:
+    app: agentiq-api
+    version: "1.0"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: agentiq-api
+  template:
+    metadata:
+      labels:
+        app: agentiq-api
+    spec:
+      containers:
+        - name: agentiq-api
+          image: agentiq:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+              name: http
+          env:
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: agentiq-secrets
+                  key: openai-api-key
+            - name: TAVILY_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: agentiq-secrets
+                  key: tavily-api-key
+            - name: LANGCHAIN_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: agentiq-secrets
+                  key: langchain-api-key
+                  optional: true
+            - name: PINECONE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: agentiq-secrets
+                  key: pinecone-api-key
+                  optional: true
+            - name: LANGCHAIN_TRACING_V2
+              value: "true"
+            - name: LANGCHAIN_PROJECT
+              value: "agentiq"
+            - name: LOG_LEVEL
+              value: "INFO"
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1000m"
+              memory: "2Gi"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            failureThreshold: 3
+          volumeMounts:
+            - name: faiss-storage
+              mountPath: /app/faiss_index
+      volumes:
+        - name: faiss-storage
+          persistentVolumeClaim:
+            claimName: agentiq-faiss-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: agentiq-faiss-pvc
+  namespace: agentiq
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: agentiq

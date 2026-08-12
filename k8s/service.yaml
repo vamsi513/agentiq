@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: agentiq-api
+  namespace: agentiq
+  labels:
+    app: agentiq-api
+spec:
+  selector:
+    app: agentiq-api
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8000
+      protocol: TCP
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: agentiq-ingress
+  namespace: agentiq
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: agentiq.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: agentiq-api
+                port:
+                  number: 80
