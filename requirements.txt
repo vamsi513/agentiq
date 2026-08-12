@@ -38,10 +38,3 @@ python-dotenv==1.0.1
 
 # ── Observability & Tracing ────────────────────────────────────────────
 langsmith>=0.1.147
-
-# ── Alternative Vector Stores ─────────────────────────────────────────────
-pinecone-client>=4.1.2
-
-# ── LlamaIndex Document Loading & Retrieval ─────────────────────────────
-llama-index-core>=0.11.0
-llama-index-embeddings-openai>=0.2.0
