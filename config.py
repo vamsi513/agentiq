@@ -51,6 +51,9 @@ class Settings:
         # API keys
         self.openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
         self.tavily_api_key: str = os.getenv("TAVILY_API_KEY", "")
+        self.langsmith_api_key: str = os.getenv("LANGCHAIN_API_KEY", "")
+        self.pinecone_api_key: str = os.getenv("PINECONE_API_KEY", "")
+        self.pinecone_index: str = os.getenv("PINECONE_INDEX", "agentiq-docs")
 
         # Model settings
         self.openai_model: str = os.getenv("OPENAI_MODEL", "gpt-4o-mini")

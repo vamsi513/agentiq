@@ -56,6 +56,9 @@ _load_secrets()
 
 # Import after secrets are loaded so config.py sees the keys
 from config import settings  # noqa: E402
+from observability.langsmith_tracer import configure_tracing  # noqa: E402
+
+configure_tracing()
 
 
 # ── Page config ───────────────────────────────────────────────────────────────
