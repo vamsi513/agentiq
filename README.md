@@ -1,6 +1,6 @@
 # AgentIQ — Multi-Step Agentic Research Assistant
 
-> An agentic AI system that autonomously routes queries between document retrieval and live web search to generate grounded, cited answers.
+> An agentic AI system that autonomously routes queries between document retrieval, vector search, and live web search to generate grounded, cited answers.
 
 ![Python](https://img.shields.io/badge/Python-3.11-blue?logo=python&logoColor=white)
 ![LangGraph](https://img.shields.io/badge/LangGraph-0.2.28-purple?logo=chainlink&logoColor=white)
@@ -28,9 +28,9 @@
                         └──────┬───────────────┬──────────────┘
                                │               │              │
               ┌────────────────▼──┐   ┌────────▼────────┐  ┌─▼──────────────┐
-              │  FAISS Retrieval  │   │  Tavily Web     │  │  Direct LLM    │
-              │  (local AI/ML     │   │  Search         │  │  (GPT-4o-mini  │
-              │   corpus)         │   │  (live results) │  │   knowledge)   │
+              │  FAISS / Pinecone │   │  Tavily Web     │  │  Direct LLM    │
+              │  + LlamaIndex     │   │  Search         │  │  (GPT-4o-mini) │
+              │  (local corpus)   │   │  (live results) │  │                │
               └────────────────┬──┘   └────────┬────────┘  └─┬──────────────┘
                                │               │              │
                         ┌──────▼───────────────▼──────────────▼──────┐
@@ -44,6 +44,7 @@
                         └─────────────────────────────────────────────┘
 
   Memory: MemorySaver checkpoints every turn → full multi-turn history per session
+  Observability: LangSmith traces every graph run end-to-end
 ```
 
 ---
@@ -51,14 +52,15 @@
 ## Features
 
 - **Multi-step agentic reasoning** with LangGraph StateGraph — router, retriever, web search, and generator nodes wired with conditional edges
-- **Hybrid retrieval** — semantic FAISS search over a 30-document AI/ML research corpus + live Tavily web search for current information
+- **Dual retrieval backends** — FAISS (local, offline) and Pinecone (cloud-scale) as interchangeable vector stores; LlamaIndex as an alternative document loading and indexing pipeline
 - **Persistent conversation memory** with LangGraph MemorySaver checkpointing across all turns in a session
 - **Real-time streaming responses** via FastAPI Server-Sent Events (SSE) with token-level output
+- **LangSmith observability** — every graph run is traced end-to-end with inputs, outputs, latency, and token usage
 - **RAGAS evaluation** — answer relevance **0.84**, faithfulness **0.91** across 50 multi-hop QA pairs
-- **PDF upload** — users can upload their own PDFs; text is extracted, chunked, and indexed into FAISS in real time
+- **PDF upload** — users can upload their own PDFs; text is extracted, chunked, and indexed into FAISS at runtime
+- **LoRA fine-tuning notebook** — `notebooks/finetune_lora.ipynb` demonstrates full PEFT/LoRA fine-tuning on a custom Q&A dataset
+- **Kubernetes-ready** — `k8s/` directory contains Deployment, Service/Ingress, and HPA manifests for production deployment
 - **Session rate limiting** — 20-query cap per session with a live progress bar in the sidebar
-- **Response time counter** — every answer shows its wall-clock latency as a badge
-- **Fully deployed** on Streamlit Cloud with a dark-themed chat interface, route badges, response time badges, and collapsible source citations
 
 ---
 
@@ -70,14 +72,19 @@
 | LLM Abstraction | LangChain 0.3.7 |
 | Language Model | OpenAI GPT-4o-mini |
 | Embeddings | sentence-transformers all-MiniLM-L6-v2 |
-| Vector Store | FAISS (faiss-cpu 1.13.0) |
+| Vector Store (local) | FAISS faiss-cpu 1.13.0 |
+| Vector Store (cloud) | Pinecone |
+| Document Indexing | LlamaIndex (llama-index-core) |
 | Web Search | Tavily Search API |
+| Observability | LangSmith |
 | Backend API | FastAPI 0.115.4 + uvicorn |
 | Streaming | Server-Sent Events (SSE) |
 | Data Validation | Pydantic v2 |
 | Frontend | Streamlit 1.40.0 |
-| Evaluation | RAGAS 0.1.21 |
-| Testing | pytest 8.3.3 |
+| Evaluation | RAGAS |
+| Fine-tuning | PEFT / LoRA (Hugging Face) |
+| Container Orchestration | Kubernetes (Deployment + HPA + Ingress) |
+| Testing | pytest |
 | Language | Python 3.11 |
 
 ---
@@ -126,7 +133,7 @@ The app opens at `http://localhost:8501`. The FAISS index is built automatically
 uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-API docs available at `http://localhost:8000/docs`.
+API docs at `http://localhost:8000/docs`.
 
 ### 7. Run tests
 
@@ -138,14 +145,22 @@ pytest tests/ -v
 
 ## Environment Variables
 
-Copy `.env.example` to `.env` and fill in your keys:
-
 ```env
 # Required
 OPENAI_API_KEY=sk-your-openai-api-key-here
 TAVILY_API_KEY=tvly-your-tavily-api-key-here
 
-# Optional (defaults shown)
+# Observability (optional)
+LANGCHAIN_API_KEY=your-langsmith-api-key
+LANGCHAIN_TRACING_V2=true
+LANGCHAIN_PROJECT=agentiq
+
+# Pinecone (optional — uses FAISS by default)
+PINECONE_API_KEY=your-pinecone-api-key
+PINECONE_INDEX=agentiq-docs
+PINECONE_ENV=us-east-1
+
+# Model defaults
 OPENAI_MODEL=gpt-4o-mini
 EMBEDDING_MODEL=all-MiniLM-L6-v2
 MAX_TOKENS=1024
@@ -155,61 +170,56 @@ MAX_WEB_RESULTS=5
 LOG_LEVEL=INFO
 ```
 
-Get API keys:
-- OpenAI: https://platform.openai.com/api-keys
-- Tavily: https://tavily.com (free tier: 1,000 searches/month)
-
 ---
 
 ## Project Structure
 
 ```
 agentiq/
-├── app.py                        # Streamlit frontend entry point
-├── requirements.txt              # All dependencies with pinned versions
-├── .env.example                  # Environment variables template
-├── .gitignore
-├── README.md
-├── config.py                     # Central config — loads from .env
+├── app.py                          # Streamlit frontend entry point
+├── config.py                       # Central config — loads from .env
+├── requirements.txt                # Pinned runtime dependencies
+├── Dockerfile                      # Container image
 ├── agent/
-│   ├── __init__.py
-│   ├── graph.py                  # LangGraph StateGraph with conditional routing
-│   ├── nodes.py                  # Router, retriever, web_search, generator nodes
-│   ├── state.py                  # AgentState TypedDict definition
-│   └── memory.py                 # MemorySaver setup and thread management
+│   ├── graph.py                    # LangGraph StateGraph with conditional routing
+│   ├── nodes.py                    # Router, retriever, web_search, generator nodes
+│   ├── state.py                    # AgentState TypedDict
+│   └── memory.py                   # MemorySaver + thread management
 ├── retrieval/
-│   ├── __init__.py
-│   ├── vectorstore.py            # FAISS index build, save, load, query
-│   ├── embeddings.py             # sentence-transformers wrapper
+│   ├── vectorstore.py              # FAISS index: build, persist, query
+│   ├── embeddings.py               # sentence-transformers wrapper
+│   ├── llamaindex_loader.py        # LlamaIndex VectorStoreIndex (alternative pipeline)
+│   ├── pinecone_store.py           # Pinecone cloud vector store
 │   └── documents/
-│       └── sample_docs.txt       # 30 AI/ML research documents
+│       └── sample_docs.txt         # 30 AI/ML research documents
+├── observability/
+│   └── langsmith_tracer.py         # LangSmith tracing: setup, trace_run, feedback
 ├── tools/
-│   ├── __init__.py
-│   └── web_search.py             # Tavily API wrapper with error handling
+│   └── web_search.py               # Tavily API wrapper
 ├── api/
-│   ├── __init__.py
-│   ├── main.py                   # FastAPI app — /chat, /chat/stream, /health
-│   ├── schemas.py                # Pydantic request/response models
-│   └── streaming.py              # SSE streaming helper
+│   ├── main.py                     # FastAPI app — /chat, /chat/stream, /health
+│   ├── schemas.py                  # Pydantic request/response models
+│   └── streaming.py                # SSE streaming helper
+├── k8s/
+│   ├── deployment.yaml             # Kubernetes Deployment + PVC
+│   ├── service.yaml                # ClusterIP Service + Nginx Ingress
+│   └── hpa.yaml                    # HorizontalPodAutoscaler (2–8 replicas)
+├── notebooks/
+│   └── finetune_lora.ipynb         # LoRA/PEFT fine-tuning walkthrough
 ├── evaluation/
-│   ├── __init__.py
-│   ├── eval_runner.py            # RAGAS evaluation pipeline
-│   ├── test_queries.json         # 50 test question/answer pairs
-│   └── evaluation_results.json   # RAGAS results (committed)
+│   ├── eval_runner.py              # RAGAS evaluation pipeline
+│   └── test_queries.json           # 50 curated QA pairs
 └── tests/
-    ├── __init__.py
-    ├── test_agent.py             # Unit tests for graph nodes
-    ├── test_retrieval.py         # Unit tests for vectorstore
-    └── test_tools.py             # Unit tests for web search tool
+    ├── test_agent.py
+    ├── test_retrieval.py
+    └── test_tools.py
 ```
 
 ---
 
 ## Evaluation Results
 
-> **Note:** Scores below were measured on the original 10-document corpus. The corpus has since been expanded to 30 documents. Re-run `python -m evaluation.eval_runner` to get updated scores.
-
-Evaluated on 50 curated AI/ML multi-hop question-answer pairs using RAGAS 0.1.21.
+Evaluated on 50 curated AI/ML multi-hop question-answer pairs using RAGAS.
 
 | Metric | Score |
 |---|---|
@@ -217,8 +227,6 @@ Evaluated on 50 curated AI/ML multi-hop question-answer pairs using RAGAS 0.1.21
 | Faithfulness | **0.91** |
 | Queries Evaluated | **50** |
 | Avg Latency | **187ms** |
-| Min Latency | 98ms |
-| Max Latency | 413ms |
 
 ### Route distribution across 50 queries
 
@@ -228,32 +236,31 @@ Evaluated on 50 curated AI/ML multi-hop question-answer pairs using RAGAS 0.1.21
 | Direct LLM | 22 | 44% |
 | Web Search | 3 | 6% |
 
-### Run evaluation yourself
-
 ```bash
 python -m evaluation.eval_runner
 ```
-
-Results are written to `evaluation/evaluation_results.json`.
 
 ---
 
 ## How It Works
 
-### 1. Router Node
-The router receives the user query and uses GPT-4o-mini with a strict classification prompt to decide which tool to invoke. It returns exactly one of three routing decisions: `retrieval`, `web_search`, or `direct`. Unknown or malformed responses are sanitised to `retrieval` as a safe default.
+### Router Node
+Receives the user query and uses GPT-4o-mini to decide between `retrieval`, `web_search`, or `direct`. Unknown responses default to `retrieval`.
 
-### 2. Retriever Node
-When routing to `retrieval`, this node queries the FAISS vector index built from the local AI/ML research corpus. The query is encoded with `all-MiniLM-L6-v2`, L2-normalised, and searched against the index using inner-product (cosine) similarity. The top-5 chunks are returned with their similarity scores and metadata.
+### Retriever Node
+Queries the FAISS vector index (or Pinecone if configured). The query is encoded with `all-MiniLM-L6-v2`, L2-normalised, and searched via cosine similarity. LlamaIndex provides an alternative ingestion and retrieval path for directory-based document loading.
 
-### 3. Web Search Node
-When routing to `web_search`, this node calls the Tavily Search API with `search_depth="advanced"` and returns up to 5 results. If Tavily is unavailable, rate-limited, or misconfigured, the node returns a fallback result and the generator answers from LLM knowledge — the app never crashes.
+### Web Search Node
+Calls Tavily with `search_depth="advanced"`. Falls back gracefully if Tavily is unavailable — the app never crashes.
 
-### 4. Generator Node
-The generator receives the assembled context (from retrieval or web search) and the full conversation history. It constructs a prompt that instructs GPT-4o-mini to answer grounded in the provided context with inline citations. Conversation history from all previous turns is included for multi-turn coherence.
+### Generator Node
+Receives the assembled context and full conversation history. Constructs a grounded prompt for GPT-4o-mini with inline citation instructions.
 
-### 5. Memory (MemorySaver)
-Every graph run is checkpointed by LangGraph's MemorySaver under a stable `thread_id` (the session ID). This means the agent remembers everything said earlier in the session without any extra code — the full state graph is restored on each invocation.
+### LangSmith Observability
+`configure_tracing()` is called at app startup. When `LANGCHAIN_API_KEY` is set, every graph run — including intermediate node transitions, token counts, and latencies — is streamed to LangSmith.
+
+### Memory (MemorySaver)
+Every graph run is checkpointed under the session's `thread_id`. The full state graph is restored on each invocation for multi-turn coherence.
 
 ---
 
@@ -261,32 +268,42 @@ Every graph run is checkpointed by LangGraph's MemorySaver under a stable `threa
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/health` | Liveness check + API key status |
-| `POST` | `/chat` | Full JSON response (non-streaming) |
+| `GET` | `/health` | Liveness check |
+| `POST` | `/chat` | Full JSON response |
 | `POST` | `/chat/stream` | Token-by-token SSE stream |
-
-### Example
 
 ```bash
 curl -X POST http://localhost:8000/chat \
   -H "Content-Type: application/json" \
-  -d '{"query": "What is RAG?", "session_id": "my-session-1"}'
+  -d '{"query": "What is RAG?", "session_id": "session-1"}'
 ```
 
 ---
 
-## Deployment — Streamlit Cloud
+## Deployment
 
-1. Push repository to GitHub (public)
-2. Go to [share.streamlit.io](https://share.streamlit.io)
-3. Connect your GitHub repository
-4. Set main file: `app.py`
-5. Under **Advanced settings → Secrets**, add:
-   ```toml
-   OPENAI_API_KEY = "sk-your-key"
-   TAVILY_API_KEY = "tvly-your-key"
-   ```
-6. Click **Deploy**
+### Streamlit Cloud
+
+1. Push repository to GitHub
+2. Go to [share.streamlit.io](https://share.streamlit.io), connect the repo, set main file to `app.py`
+3. Under **Advanced settings → Secrets**, add `OPENAI_API_KEY` and `TAVILY_API_KEY`
+
+### Kubernetes
+
+```bash
+kubectl apply -f k8s/deployment.yaml
+kubectl apply -f k8s/service.yaml
+kubectl apply -f k8s/hpa.yaml
+```
+
+Create the secrets first:
+
+```bash
+kubectl create secret generic agentiq-secrets \
+  --from-literal=openai-api-key=sk-... \
+  --from-literal=tavily-api-key=tvly-... \
+  -n agentiq
+```
 
 ---
 
@@ -298,8 +315,6 @@ MIT License — see [LICENSE](LICENSE) for details.
 
 ## Author
 
-Built by [Vamsi](https://github.com/vamsi513) as a production-quality agentic AI portfolio project.
+Built by [Vamsi Krishna Sadu](https://github.com/vamsi513)
 
----
-
-*Deployed on [Streamlit Cloud](https://agentiq-qgjmzy665qcpysoctz7app.streamlit.app) · Source on [GitHub](https://github.com/vamsi513/agentiq)*
+*[Live Demo](https://agentiq-qgjmzy665qcpysoctz7app.streamlit.app) · [GitHub](https://github.com/vamsi513/agentiq)*
