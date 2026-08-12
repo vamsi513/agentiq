@@ -16,6 +16,14 @@
 
 ---
 
+## Screenshots
+
+### App overview
+
+![AgentIQ home](screenshots/agentiq-home.png)
+
+---
+
 ## Architecture
 
 ```
