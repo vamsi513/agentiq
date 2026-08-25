@@ -65,7 +65,7 @@
 - **Persistent conversation memory** with LangGraph MemorySaver checkpointing across all turns in a session
 - **Real-time streaming responses** via FastAPI Server-Sent Events (SSE) with token-level output
 - **LangSmith observability** — every graph run is traced end-to-end with inputs, outputs, latency, and token usage
-- **RAGAS evaluation** — answer relevance **0.84**, faithfulness **0.91** across 50 multi-hop QA pairs
+- **RAGAS evaluation** — answer relevance **0.68**, faithfulness **0.69** across 50 multi-hop QA pairs
 - **PDF upload** — users can upload their own PDFs; text is extracted, chunked, and indexed into FAISS at runtime
 - **LoRA fine-tuning notebook** — `notebooks/finetune_lora.ipynb` demonstrates full PEFT/LoRA fine-tuning on a custom Q&A dataset
 - **Kubernetes-ready** — `k8s/` directory contains Deployment, Service/Ingress, and HPA manifests for production deployment
@@ -232,18 +232,16 @@ Evaluated on 50 curated AI/ML multi-hop question-answer pairs using RAGAS.
 
 | Metric | Score |
 |---|---|
-| Answer Relevancy | **0.84** |
-| Faithfulness | **0.91** |
+| Answer Relevancy | **0.6847** |
+| Faithfulness | **0.6862** |
 | Queries Evaluated | **50** |
-| Avg Latency | **187ms** |
+| Avg Latency | **6628ms** |
 
 ### Route distribution across 50 queries
 
 | Route | Count | % |
 |---|---|---|
-| Document Retrieval | 25 | 50% |
-| Direct LLM | 22 | 44% |
-| Web Search | 3 | 6% |
+| Document Retrieval | 50 | 100% |
 
 ```bash
 python -m evaluation.eval_runner

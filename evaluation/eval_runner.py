@@ -112,11 +112,11 @@ def _run_ragas(
         return scores
 
     except ImportError as exc:
-        logger.error("RAGAS import failed: %s — returning mock scores.", exc)
-        return {"answer_relevancy": 0.84, "faithfulness": 0.91}
+        logger.error("RAGAS import failed: %s", exc)
+        raise
     except Exception as exc:
-        logger.exception("RAGAS evaluation failed: %s — returning mock scores.", exc)
-        return {"answer_relevancy": 0.84, "faithfulness": 0.91}
+        logger.exception("RAGAS evaluation failed: %s", exc)
+        raise
 
 
 # ── Main pipeline ─────────────────────────────────────────────────────────────
