@@ -23,13 +23,13 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install -r requirements.txt pytest pytest-asyncio ruff
+        run: pip install -r requirements.txt pytest pytest-asyncio "ruff==0.9.10"
 
       - name: Lint
         run: ruff check agent api config.py
 
       - name: Security scan
-        run: pip install pip-audit && pip-audit 2>&1 || true
+        run: pip install pip-audit && pip-audit
 
       - name: Build Docker image
         run: docker build -t agentiq-api:${{ github.sha }} .

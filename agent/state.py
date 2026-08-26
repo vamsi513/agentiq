@@ -12,10 +12,10 @@ this is the standard LangChain/LangGraph message-accumulation pattern.
 """
 
 import operator
-from typing import Annotated, Any, Optional
-from typing_extensions import TypedDict
+from typing import Annotated, Any
 
 from langchain_core.messages import BaseMessage
+from typing_extensions import TypedDict
 
 
 class AgentState(TypedDict):
@@ -57,5 +57,5 @@ class AgentState(TypedDict):
     session_id: str
     turn_count: int
     retrieval_score: float
-    error: Optional[str]
-    metadata: Optional[dict[str, Any]]
+    error: str | None
+    metadata: dict[str, Any] | None

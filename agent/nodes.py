@@ -111,8 +111,8 @@ def router_node(state: AgentState) -> dict[str, Any]:
             )
             decision = "retrieval"
 
-    except Exception as exc:
-        logger.exception("Router LLM call failed: %s — defaulting to direct.", exc)
+    except Exception:
+        logger.exception("Router LLM call failed — defaulting to direct.")
         decision = "direct"
 
     logger.info("Route decision: %s", decision)
@@ -210,8 +210,8 @@ def retriever_node(state: AgentState) -> dict[str, Any]:
         logger.info("Retriever found %d chunks (top score=%.3f).", len(results), top_score)
         return {"context": context, "sources": sources, "retrieval_score": top_score}
 
-    except Exception as exc:
-        logger.exception("Retriever error: %s", exc)
+    except Exception:
+        logger.exception("Retriever error")
         return {
             "context": "Document retrieval failed. No context is available.",
             "sources": [],
@@ -267,8 +267,8 @@ def web_search_node(state: AgentState) -> dict[str, Any]:
         logger.info("Web search yielded %d sources.", len(sources))
         return {"context": context, "sources": sources}
 
-    except Exception as exc:
-        logger.exception("Web search node error: %s", exc)
+    except Exception:
+        logger.exception("Web search node error")
         return {
             "context": "Web search failed. Answering from model knowledge.",
             "sources": [],
@@ -311,7 +311,7 @@ def direct_node(state: AgentState) -> dict[str, Any]:
             "sources": [],
         }
     except Exception as exc:
-        logger.exception("Direct node LLM call failed: %s", exc)
+        logger.exception("Direct node LLM call failed")
         current_turn = state.get("turn_count", 0)
         return {
             "messages": [AIMessage(content="I encountered an error. Please try again.")],
@@ -400,7 +400,7 @@ def generator_node(state: AgentState) -> dict[str, Any]:
         }
 
     except Exception as exc:
-        logger.exception("Generator LLM call failed: %s", exc)
+        logger.exception("Generator LLM call failed")
         error_msg = (
             "I encountered an error while generating a response. "
             "Please check your OpenAI API key and try again."

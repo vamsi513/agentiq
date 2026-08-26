@@ -5,7 +5,8 @@ All API boundaries are validated through these models so that invalid
 input is rejected before it reaches the agent graph.
 """
 
-from typing import Any, Optional
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -25,7 +26,7 @@ class ChatRequest(BaseModel):
         max_length=2000,
         description="The user's question or message.",
     )
-    session_id: Optional[str] = Field(
+    session_id: str | None = Field(
         default=None,
         description="Session ID for multi-turn memory. Auto-generated if omitted.",
     )

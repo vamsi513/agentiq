@@ -8,4 +8,4 @@ callers only need to import from this top-level package.
 from agent.graph import build_graph
 from agent.state import AgentState
 
-__all__ = ["build_graph", "AgentState"]
+__all__ = ["AgentState", "build_graph"]

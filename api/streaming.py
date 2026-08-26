@@ -21,7 +21,7 @@ Key design decisions:
 
 import json
 import logging
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 from langchain_core.messages import HumanMessage
 
@@ -141,7 +141,7 @@ async def stream_agent_response(
         logger.info("Stream complete: session=%s", session_id)
 
     except Exception as exc:
-        logger.exception("Streaming error: session=%s error=%s", session_id, exc)
+        logger.exception("Streaming error: session=%s", session_id)
         yield _sse("error", f"Agent error: {type(exc).__name__}. Please try again.")
         yield _sse("done", None)
 
@@ -187,6 +187,6 @@ async def run_agent_sync(
             "retrieval_score": result.get("retrieval_score", 0.0),
         }
 
-    except Exception as exc:
-        logger.exception("Agent sync run failed: %s", exc)
+    except Exception:
+        logger.exception("Agent sync run failed")
         raise

@@ -12,7 +12,6 @@ MemorySaver for SqliteSaver or PostgresSaver from langgraph.checkpoint.
 
 import logging
 import uuid
-from typing import Optional
 
 from langgraph.checkpoint.memory import MemorySaver
 
@@ -21,7 +20,7 @@ logger = logging.getLogger(__name__)
 # ── Singleton checkpointer ────────────────────────────────────────────────────
 # One MemorySaver is shared across the entire process so all threads are
 # held in the same in-memory store.
-_memory_saver: Optional[MemorySaver] = None
+_memory_saver: MemorySaver | None = None
 
 
 def get_memory() -> MemorySaver:

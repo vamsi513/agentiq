@@ -15,7 +15,6 @@ import hmac
 import time
 import uuid
 from contextlib import asynccontextmanager
-from typing import Optional
 
 import structlog
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
@@ -67,7 +66,7 @@ def _check_rate_limit(request: Request) -> None:
 
 
 async def _require_api_key(
-    x_api_key: Optional[str] = Header(default=None, alias="X-API-Key"),
+    x_api_key: str | None = Header(default=None, alias="X-API-Key"),
 ) -> None:
     """Reject requests that don't carry the configured API key.
     When AGENTIQ_API_KEY is unset the check is skipped (dev/demo mode)."""
@@ -219,8 +218,8 @@ async def chat(request: ChatRequest, req: Request, _: None = Depends(_require_ap
             retrieval_score=result.get("retrieval_score", 0.0),
         )
 
-    except Exception as exc:
-        logger.exception("Unhandled error in /chat: %s", exc)
+    except Exception:
+        logger.exception("Unhandled error in /chat")
         raise HTTPException(
             status_code=500,
             detail="Internal agent error. Check server logs for details.",
