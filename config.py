@@ -12,6 +12,7 @@ import logging
 import os
 from pathlib import Path
 
+import structlog
 from dotenv import load_dotenv
 
 # ── Bootstrap: load .env before anything else accesses os.environ ────────────
@@ -19,7 +20,6 @@ _ENV_FILE = Path(__file__).parent / ".env"
 load_dotenv(dotenv_path=_ENV_FILE, override=False)
 
 # ── Structured JSON logging ────────────────────────────────────────────────────
-import structlog
 
 _log_level = os.getenv("LOG_LEVEL", "INFO").upper()
 logging.basicConfig(format="%(message)s", level=_log_level)
