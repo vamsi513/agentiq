@@ -119,6 +119,30 @@ def router_node(state: AgentState) -> dict[str, Any]:
     return {"query": query, "route_decision": decision}
 
 
+# ── Query rewriting ───────────────────────────────────────────────────────────
+
+def _rewrite_query(query: str) -> list[str]:
+    """Return the original query plus up to 2 paraphrased variants.
+
+    Running FAISS against multiple phrasings of the same question surfaces
+    chunks that use different vocabulary than the original, improving recall
+    on questions that paraphrase or abbreviate technical terms.
+    """
+    try:
+        llm = _get_llm()
+        prompt = (
+            "Rewrite the following question in 2 different ways that preserve "
+            "its meaning but use different vocabulary. Output only the two "
+            "rewritten questions, one per line, with no numbering or labels.\n\n"
+            f"Question: {query}"
+        )
+        response = llm.invoke([{"role": "user", "content": prompt}])
+        variants = [line.strip() for line in response.content.strip().splitlines() if line.strip()]
+        return [query] + variants[:2]
+    except Exception:
+        return [query]
+
+
 # ── Retriever node ────────────────────────────────────────────────────────────
 
 def retriever_node(state: AgentState) -> dict[str, Any]:
@@ -144,7 +168,20 @@ def retriever_node(state: AgentState) -> dict[str, Any]:
     try:
         from retrieval.vectorstore import query_vectorstore
 
-        results = query_vectorstore(query)
+        # Run retrieval on original query plus paraphrased variants to improve
+        # recall on questions that use different vocabulary than the documents.
+        variants = _rewrite_query(query)
+        seen: set[str] = set()
+        merged: list[dict] = []
+        for q in variants:
+            for r in query_vectorstore(q, top_k=5):
+                key = r["content"][:120]
+                if key not in seen:
+                    seen.add(key)
+                    merged.append(r)
+
+        # Keep top 3 by score — a tighter context window reduces hallucination.
+        results = sorted(merged, key=lambda r: r["score"], reverse=True)[:3]
 
         if not results:
             logger.warning("FAISS returned no results for query: %.80s", query)
@@ -176,7 +213,7 @@ def retriever_node(state: AgentState) -> dict[str, Any]:
     except Exception as exc:
         logger.exception("Retriever error: %s", exc)
         return {
-            "context": "Document retrieval failed. Answering from model knowledge.",
+            "context": "Document retrieval failed. No context is available.",
             "sources": [],
         }
 
@@ -240,17 +277,19 @@ def web_search_node(state: AgentState) -> dict[str, Any]:
 
 # ── Generator node ────────────────────────────────────────────────────────────
 
-_GENERATOR_SYSTEM_PROMPT = """You are AgentIQ, a precise and helpful research assistant.
+_GENERATOR_SYSTEM_PROMPT = """You are AgentIQ, a precise research assistant.
 
-Your job is to answer the user's question using the provided context.
+Answer the user's question using ONLY the information in the provided context.
+Do not add facts, explanations, or claims that are not explicitly stated in the context.
+If the context does not contain enough information to fully answer the question, say exactly
+what the context does cover and state clearly that you cannot answer the rest from the
+available documents.
 
 Guidelines:
-- Answer directly and concisely.
-- Ground your answer in the provided context when available.
-- Cite sources by mentioning their title inline, e.g. "According to [Source Title], …"
-- If context is empty or unhelpful, answer from your general knowledge and say so.
-- Never fabricate citations or URLs.
-- Use markdown formatting: bold key terms, use bullet points for lists.
+- Stay strictly within what the context says.
+- Cite sources inline by title, e.g. "According to [Source Title], …"
+- Never fabricate citations, URLs, or facts not present in the context.
+- Use markdown: bold key terms, bullet points for lists.
 - Keep answers focused — 2–4 paragraphs unless the question demands more detail."""
 
 
@@ -285,8 +324,8 @@ def generator_node(state: AgentState) -> dict[str, Any]:
     else:
         user_content = (
             f"Question: {query}\n\n"
-            "No external context was retrieved. "
-            "Please answer from your general knowledge."
+            "No context was retrieved for this question. "
+            "State that you do not have relevant documents to answer from."
         )
 
     # Rebuild conversation history for the LLM (exclude the current HumanMessage
