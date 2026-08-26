@@ -1,0 +1,8 @@
+line-length = 100
+target-version = "py311"
+
+[lint]
+ignore = [
+  "B008",    # FastAPI uses Depends() in function defaults by design
+  "BLE001",  # Broad Exception catches are intentional in error fallback paths
+]

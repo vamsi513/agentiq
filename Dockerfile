@@ -9,11 +9,16 @@ COPY requirements.txt ./
 RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu \
     && pip install --no-cache-dir -r requirements.txt
 
+RUN addgroup --system appgroup && adduser --system --ingroup appgroup --uid 1000 appuser
+
 COPY agent ./agent
 COPY api ./api
 COPY retrieval ./retrieval
 COPY tools ./tools
 COPY config.py ./
+
+RUN chown -R appuser:appgroup /app
+USER appuser
 
 EXPOSE 8000
 
