@@ -35,12 +35,15 @@ _rate_counters: dict[str, collections.deque] = {}
 
 
 def _real_client_ip(request: Request) -> str:
-    # When the app runs behind nginx, the real client IP is in X-Forwarded-For.
-    # We take only the first (leftmost) entry — that's the original client.
-    forwarded_for = request.headers.get("X-Forwarded-For")
-    if forwarded_for:
-        return forwarded_for.split(",")[0].strip()
-    return request.client.host if request.client else "unknown"
+    # Only trust X-Forwarded-For when the direct connection comes from a
+    # known reverse proxy (nginx on the same host). Trusting it from arbitrary
+    # IPs would let clients spoof their address and bypass rate limiting.
+    direct_ip = request.client.host if request.client else "unknown"
+    if direct_ip in settings.trusted_proxy_ips:
+        forwarded_for = request.headers.get("X-Forwarded-For")
+        if forwarded_for:
+            return forwarded_for.split(",")[0].strip()
+    return direct_ip
 
 
 def _check_rate_limit(request: Request) -> None:
@@ -128,7 +131,7 @@ app = FastAPI(
 # Tighten allow_origins to specific domains in a production deployment.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.allowed_origins,
     allow_credentials=False,
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type", "Authorization", "X-API-Key"],
@@ -176,7 +179,6 @@ async def health() -> HealthResponse:
     tags=["Agent"],
 )
 async def chat(request: ChatRequest, req: Request, _: None = Depends(_require_api_key)) -> ChatResponse:
-    _check_rate_limit(req)
     """
     Invoke the AgentIQ graph and return the complete answer as JSON.
 
@@ -192,6 +194,7 @@ async def chat(request: ChatRequest, req: Request, _: None = Depends(_require_ap
     Raises:
         HTTPException 500: If the agent graph raises an unexpected error.
     """
+    _check_rate_limit(req)
     session_id = request.session_id or str(uuid.uuid4())
     logger.info("POST /chat | session=%s | query='%.60s'", session_id, request.query)
 
@@ -234,7 +237,6 @@ async def chat(request: ChatRequest, req: Request, _: None = Depends(_require_ap
     tags=["Agent"],
 )
 async def chat_stream(request: ChatRequest, req: Request, _: None = Depends(_require_api_key)) -> StreamingResponse:
-    _check_rate_limit(req)
     """
     Invoke the AgentIQ graph and stream the response as Server-Sent Events.
 
@@ -250,6 +252,7 @@ async def chat_stream(request: ChatRequest, req: Request, _: None = Depends(_req
     Returns:
         StreamingResponse with ``text/event-stream`` content type.
     """
+    _check_rate_limit(req)
     session_id = request.session_id or str(uuid.uuid4())
     logger.info(
         "POST /chat/stream | session=%s | query='%.60s'",

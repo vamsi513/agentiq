@@ -86,6 +86,23 @@ class Settings:
         # Leave unset (default) to allow unauthenticated access (dev/demo mode).
         self.api_key: str = os.getenv("AGENTIQ_API_KEY", "")
 
+        # CORS: comma-separated list of allowed origins, e.g.
+        # ALLOWED_ORIGINS=https://myapp.com,http://localhost:8501
+        # Set to * only in dev; restrict to real origins in production.
+        _raw_origins = os.getenv("ALLOWED_ORIGINS", "")
+        self.allowed_origins: list[str] = (
+            [o.strip() for o in _raw_origins.split(",") if o.strip()]
+            if _raw_origins
+            else ["*"]
+        )
+
+        # Comma-separated IPs of trusted reverse proxies (e.g. nginx on localhost).
+        # Only requests arriving from these IPs will have X-Forwarded-For trusted.
+        _raw_proxies = os.getenv("TRUSTED_PROXY_IPS", "127.0.0.1")
+        self.trusted_proxy_ips: set[str] = {
+            ip.strip() for ip in _raw_proxies.split(",") if ip.strip()
+        }
+
         # Logging
         self.log_level: str = os.getenv("LOG_LEVEL", "INFO").upper()
 
