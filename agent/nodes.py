@@ -30,19 +30,16 @@ logger = logging.getLogger(__name__)
 # ── LLM singleton ─────────────────────────────────────────────────────────────
 
 def _get_llm() -> ChatOpenAI:
-    """
-    Return a configured ChatOpenAI instance for gpt-4o-mini.
+    return _llm
 
-    Returns:
-        ChatOpenAI ready for invocation.
-    """
-    return ChatOpenAI(
-        model=settings.openai_model,
-        temperature=settings.temperature,
-        max_tokens=settings.max_tokens,
-        api_key=settings.openai_api_key,
-        streaming=True,
-    )
+
+_llm = ChatOpenAI(
+    model=settings.openai_model,
+    temperature=settings.temperature,
+    max_tokens=settings.max_tokens,
+    api_key=settings.openai_api_key,
+    streaming=True,
+)
 
 
 # ── Router node ───────────────────────────────────────────────────────────────
@@ -168,9 +165,9 @@ def retriever_node(state: AgentState) -> dict[str, Any]:
     try:
         from retrieval.vectorstore import query_vectorstore
 
-        # Run retrieval on original query plus paraphrased variants to improve
-        # recall on questions that use different vocabulary than the documents.
-        variants = _rewrite_query(query)
+        # Optionally expand to paraphrased variants (set ENABLE_QUERY_REWRITING=true).
+        # Off by default — each rewrite adds a full LLM round-trip.
+        variants = _rewrite_query(query) if settings.enable_query_rewriting else [query]
         seen: set[str] = set()
         merged: list[dict] = []
         for q in variants:

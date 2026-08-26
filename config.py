@@ -70,6 +70,7 @@ class Settings:
         # Retrieval settings
         self.top_k_retrieval: int = int(os.getenv("TOP_K_RETRIEVAL", "5"))
         self.max_web_results: int = int(os.getenv("MAX_WEB_RESULTS", "5"))
+        self.enable_query_rewriting: bool = os.getenv("ENABLE_QUERY_REWRITING", "false").lower() == "true"
 
         # Logging
         self.log_level: str = os.getenv("LOG_LEVEL", "INFO").upper()
