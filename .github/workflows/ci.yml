@@ -7,6 +7,10 @@ on:
     branches: [master]
   workflow_dispatch:
 
+concurrency:
+  group: deploy-agentiq
+  cancel-in-progress: false
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -26,6 +30,9 @@ jobs:
 
       - name: Security scan
         run: pip install pip-audit && pip-audit 2>&1 || true
+
+      - name: Build Docker image
+        run: docker build -t agentiq-api:${{ github.sha }} .
 
       - name: Run tests
         run: pytest tests/ -v --tb=short --junitxml=test-results.xml
@@ -50,11 +57,43 @@ jobs:
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            set -e
             cd /home/ec2-user/agentiq
-            git pull origin master
-            sudo docker build -t agentiq-api .
+
+            # Save running image for rollback
+            OLD_IMAGE=$(sudo docker inspect agentiq-api --format='{{.Config.Image}}' 2>/dev/null || echo "")
+
+            # Deploy exact tested commit
+            git fetch origin
+            git checkout --detach ${{ github.sha }}
+
+            sudo docker build -t agentiq-api:${{ github.sha }} .
             sudo docker stop agentiq-api || true
             sudo docker rm agentiq-api || true
-            sudo docker run -d --name agentiq-api --network host --env-file .env agentiq-api \
+            sudo docker run -d --name agentiq-api --network host --env-file .env \
+              agentiq-api:${{ github.sha }} \
               uvicorn api.main:app --host 0.0.0.0 --port 8000 --root-path /agentiq
-            sudo docker image prune -f
+
+            # Health check — 12 attempts × 5 s = 60 s window
+            for attempt in $(seq 1 12); do
+              if curl --fail --silent http://localhost:8000/health; then
+                echo "Health check passed on attempt $attempt"
+                sudo docker image prune -f
+                exit 0
+              fi
+              echo "Attempt $attempt failed, retrying in 5s..."
+              sleep 5
+            done
+
+            # Rollback to previous image
+            echo "Health check failed — rolling back"
+            sudo docker logs agentiq-api --tail 50
+            sudo docker stop agentiq-api || true
+            sudo docker rm agentiq-api || true
+            if [ -n "$OLD_IMAGE" ]; then
+              sudo docker run -d --name agentiq-api --network host --env-file .env \
+                "$OLD_IMAGE" \
+                uvicorn api.main:app --host 0.0.0.0 --port 8000 --root-path /agentiq
+              echo "Rolled back to $OLD_IMAGE"
+            fi
+            exit 1

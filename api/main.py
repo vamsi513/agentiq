@@ -31,12 +31,21 @@ logger = structlog.get_logger(__name__)
 # ── Rate limiting (token-bucket per IP, 30 req/min) ──────────────────────────
 _RATE_LIMIT = 30
 _RATE_WINDOW = 60.0
-_rate_counters: dict[str, collections.deque] = collections.defaultdict(collections.deque)
+_MAX_TRACKED_IPS = 2000
+_rate_counters: dict[str, collections.deque] = {}
 
 
 def _check_rate_limit(request: Request) -> None:
     client_ip = request.client.host if request.client else "unknown"
     now = time.monotonic()
+
+    if client_ip not in _rate_counters:
+        # Evict oldest entry when the table is full to bound memory usage
+        if len(_rate_counters) >= _MAX_TRACKED_IPS:
+            _rate_counters.pop(next(iter(_rate_counters)))
+        # maxlen bounds each deque to at most _RATE_LIMIT + 1 entries
+        _rate_counters[client_ip] = collections.deque(maxlen=_RATE_LIMIT + 1)
+
     timestamps = _rate_counters[client_ip]
     while timestamps and timestamps[0] < now - _RATE_WINDOW:
         timestamps.popleft()
