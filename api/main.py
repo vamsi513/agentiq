@@ -35,8 +35,17 @@ _MAX_TRACKED_IPS = 2000
 _rate_counters: dict[str, collections.deque] = {}
 
 
+def _real_client_ip(request: Request) -> str:
+    # When the app runs behind nginx, the real client IP is in X-Forwarded-For.
+    # We take only the first (leftmost) entry — that's the original client.
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
 def _check_rate_limit(request: Request) -> None:
-    client_ip = request.client.host if request.client else "unknown"
+    client_ip = _real_client_ip(request)
     now = time.monotonic()
 
     if client_ip not in _rate_counters:
