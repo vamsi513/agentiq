@@ -220,6 +220,7 @@ agentiq/
 │   └── test_queries.json           # 50 curated QA pairs
 └── tests/
     ├── test_agent.py
+    ├── test_api.py
     ├── test_retrieval.py
     └── test_tools.py
 ```
@@ -295,6 +296,17 @@ curl -X POST http://localhost:8000/chat \
 2. Go to [share.streamlit.io](https://share.streamlit.io), connect the repo, set main file to `app.py`
 3. Under **Advanced settings → Secrets**, add `OPENAI_API_KEY` and `TAVILY_API_KEY`
 
+### AWS EC2 (via GitHub Actions CI/CD)
+
+Every push to `master` triggers a GitHub Actions pipeline:
+
+1. Runs the full test suite
+2. Builds the Docker image (catches broken images before they reach the server)
+3. Deploys to EC2 via SSH — pulls the exact tested commit, rebuilds, and restarts the container
+4. Runs a health check loop (`GET /health`) — if the app fails to start, the old image is automatically restored
+
+Required GitHub Secrets: `EC2_HOST`, `EC2_SSH_KEY`
+
 ### Kubernetes
 
 ```bash
@@ -325,4 +337,3 @@ MIT License — see [LICENSE](LICENSE) for details.
 Built by [Vamsi Krishna Sadu](https://github.com/vamsi513)
 
 *[Live Demo](https://agentiq-qgjmzy665qcpysoctz7app.streamlit.app) · [GitHub](https://github.com/vamsi513/agentiq)*
-# test
