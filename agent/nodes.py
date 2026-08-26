@@ -29,17 +29,20 @@ logger = logging.getLogger(__name__)
 
 # ── LLM singleton ─────────────────────────────────────────────────────────────
 
+_llm: ChatOpenAI | None = None
+
+
 def _get_llm() -> ChatOpenAI:
+    global _llm
+    if _llm is None:
+        _llm = ChatOpenAI(
+            model=settings.openai_model,
+            temperature=settings.temperature,
+            max_tokens=settings.max_tokens,
+            api_key=settings.openai_api_key,
+            streaming=True,
+        )
     return _llm
-
-
-_llm = ChatOpenAI(
-    model=settings.openai_model,
-    temperature=settings.temperature,
-    max_tokens=settings.max_tokens,
-    api_key=settings.openai_api_key,
-    streaming=True,
-)
 
 
 # ── Router node ───────────────────────────────────────────────────────────────
