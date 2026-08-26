@@ -30,3 +30,25 @@ jobs:
         with:
           name: test-results
           path: test-results.xml
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+
+    steps:
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /home/ec2-user/agentiq
+            git pull origin master
+            sudo docker build -t agentiq-api .
+            sudo docker stop agentiq-api || true
+            sudo docker rm agentiq-api || true
+            sudo docker run -d --name agentiq-api --network host --env-file .env agentiq-api \
+              uvicorn api.main:app --host 0.0.0.0 --port 8000 --root-path /agentiq
+            sudo docker image prune -f
