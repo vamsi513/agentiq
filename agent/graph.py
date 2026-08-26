@@ -2,10 +2,10 @@
 agent/graph.py — Complete LangGraph StateGraph for AgentIQ.
 
 Graph topology:
-    START → router → [retriever | web_search | generator] → generator → END
+    START → router → [retriever | web_search | direct] → [generator | END]
 
 Conditional routing is driven by the ``route_decision`` field written by
-the router node.  MemorySaver checkpointing gives every session persistent
+the router node.  MemorySaver checkpointing gives every session in-process
 multi-turn memory keyed by ``thread_id``.
 """
 
@@ -24,24 +24,14 @@ logger = logging.getLogger(__name__)
 
 def _route_decision(
     state: AgentState,
-) -> Literal["retriever", "web_search", "generator"]:
-    """
-    Conditional edge function: maps router's decision to the next node.
-
-    Args:
-        state: Current AgentState containing ``route_decision``.
-
-    Returns:
-        Name of the next node to execute.
-    """
+) -> Literal["retriever", "web_search", "direct"]:
     decision = state.get("route_decision", "direct")
     logger.debug("Routing to: %s", decision)
-
     if decision == "retrieval":
         return "retriever"
     if decision == "web_search":
         return "web_search"
-    return "generator"
+    return "direct"
 
 
 # ── Graph builder ─────────────────────────────────────────────────────────────
@@ -59,6 +49,7 @@ def build_graph(checkpointer: MemorySaver | None = None):
         Compiled LangGraph ``CompiledGraph`` ready to invoke or stream.
     """
     from agent.nodes import (
+        direct_node,
         generator_node,
         retriever_node,
         router_node,
@@ -71,6 +62,7 @@ def build_graph(checkpointer: MemorySaver | None = None):
     graph.add_node("router", router_node)
     graph.add_node("retriever", retriever_node)
     graph.add_node("web_search", web_search_node)
+    graph.add_node("direct", direct_node)
     graph.add_node("generator", generator_node)
 
     # ── Entry ─────────────────────────────────────────────────────────────────
@@ -83,13 +75,14 @@ def build_graph(checkpointer: MemorySaver | None = None):
         {
             "retriever": "retriever",
             "web_search": "web_search",
-            "generator": "generator",
+            "direct": "direct",
         },
     )
 
-    # ── Convergence at generator ──────────────────────────────────────────────
+    # ── Convergence: retriever/web_search feed generator; direct goes to END ──
     graph.add_edge("retriever", "generator")
     graph.add_edge("web_search", "generator")
+    graph.add_edge("direct", END)
     graph.add_edge("generator", END)
 
     # ── Compile ───────────────────────────────────────────────────────────────

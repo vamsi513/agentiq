@@ -61,14 +61,14 @@
 ## Features
 
 - **Multi-step agentic reasoning** with LangGraph StateGraph — router, retriever, web search, and generator nodes wired with conditional edges
-- **Dual retrieval backends** — FAISS (local, offline) and Pinecone (cloud-scale) as interchangeable vector stores; LlamaIndex as an alternative document loading and indexing pipeline
-- **Persistent conversation memory** with LangGraph MemorySaver checkpointing across all turns in a session
+- **FAISS retrieval** — primary backend with L2-normalized embeddings for cosine similarity; experimental Pinecone and LlamaIndex adapters included as alternative backends
+- **In-process session memory** with LangGraph MemorySaver checkpointing across all turns in a session (process-local; not persisted across restarts)
 - **Real-time streaming responses** via FastAPI Server-Sent Events (SSE) with token-level output
 - **LangSmith observability** — every graph run is traced end-to-end with inputs, outputs, latency, and token usage
 - **RAGAS evaluation** — answer relevance **0.68**, faithfulness **0.69** across 50 multi-hop QA pairs
 - **PDF upload** — users can upload their own PDFs; text is extracted, chunked, and indexed into FAISS at runtime
 - **LoRA fine-tuning notebook** — `notebooks/finetune_lora.ipynb` demonstrates full PEFT/LoRA fine-tuning on a custom Q&A dataset
-- **Kubernetes-ready** — `k8s/` directory contains Deployment, Service/Ingress, and HPA manifests for production deployment
+- **Kubernetes manifests** — `k8s/` directory contains Deployment, Service/Ingress, and HPA manifests as a deployment reference
 - **Session rate limiting** — 20-query cap per session with a live progress bar in the sidebar
 
 ---

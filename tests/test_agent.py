@@ -65,19 +65,19 @@ class TestRouteDecision:
         state = _base_state(route_decision="web_search")
         assert _route_decision(state) == "web_search"
 
-    def test_direct_routes_to_generator(self):
-        """route_decision='direct' → 'generator' node (skip retrieval)."""
+    def test_direct_routes_to_direct(self):
+        """route_decision='direct' → 'direct' node (conversational answer)."""
         from agent.graph import _route_decision
 
         state = _base_state(route_decision="direct")
-        assert _route_decision(state) == "generator"
+        assert _route_decision(state) == "direct"
 
-    def test_unknown_routes_to_generator(self):
-        """Any unknown route_decision defaults to 'generator'."""
+    def test_unknown_routes_to_direct(self):
+        """Any unknown route_decision defaults to 'direct'."""
         from agent.graph import _route_decision
 
         state = _base_state(route_decision="unknown_value")
-        assert _route_decision(state) == "generator"
+        assert _route_decision(state) == "direct"
 
 
 # ── router_node ───────────────────────────────────────────────────────────────

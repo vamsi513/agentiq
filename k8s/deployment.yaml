@@ -1,3 +1,20 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: agentiq
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: agentiq-faiss-pvc
+  namespace: agentiq
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 5Gi
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -16,9 +33,12 @@ spec:
       labels:
         app: agentiq-api
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
       containers:
         - name: agentiq-api
-          image: agentiq:latest
+          image: agentiq:1.0.0
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8000
@@ -80,20 +100,3 @@ spec:
         - name: faiss-storage
           persistentVolumeClaim:
             claimName: agentiq-faiss-pvc
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: agentiq-faiss-pvc
-  namespace: agentiq
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 5Gi
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: agentiq

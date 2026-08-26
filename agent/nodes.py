@@ -272,6 +272,51 @@ def web_search_node(state: AgentState) -> dict[str, Any]:
         }
 
 
+# ── Direct answer node ───────────────────────────────────────────────────────
+
+_DIRECT_SYSTEM_PROMPT = """You are AgentIQ, a helpful research assistant.
+Answer the user's question directly and conversationally.
+For greetings, respond warmly. For general knowledge questions, answer from
+your training knowledge. Keep answers concise and clear."""
+
+
+def direct_node(state: AgentState) -> dict[str, Any]:
+    """Answer conversational and general-knowledge queries directly without retrieval."""
+    query = state.get("query", "")
+    messages = state.get("messages", [])
+
+    logger.info("Direct node answering query: %.80s", query)
+
+    history: list[dict[str, str]] = [
+        {"role": "system", "content": _DIRECT_SYSTEM_PROMPT}
+    ]
+    for msg in messages[:-1]:
+        if isinstance(msg, HumanMessage):
+            history.append({"role": "user", "content": msg.content})
+        elif isinstance(msg, AIMessage):
+            history.append({"role": "assistant", "content": msg.content})
+    history.append({"role": "user", "content": query})
+
+    try:
+        response = _get_llm().invoke(history)
+        current_turn = state.get("turn_count", 0)
+        logger.info("Direct node produced answer (%d chars).", len(response.content))
+        return {
+            "messages": [AIMessage(content=response.content)],
+            "turn_count": current_turn + 1,
+            "context": "",
+            "sources": [],
+        }
+    except Exception as exc:
+        logger.exception("Direct node LLM call failed: %s", exc)
+        current_turn = state.get("turn_count", 0)
+        return {
+            "messages": [AIMessage(content="I encountered an error. Please try again.")],
+            "turn_count": current_turn + 1,
+            "error": str(exc),
+        }
+
+
 # ── Generator node ────────────────────────────────────────────────────────────
 
 _GENERATOR_SYSTEM_PROMPT = """You are AgentIQ, a precise research assistant.
