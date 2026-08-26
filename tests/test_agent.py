@@ -385,3 +385,62 @@ class TestBuildGraph:
             graph = build_graph(checkpointer=MemorySaver())
 
         assert graph is not None
+
+
+# ── direct_node ───────────────────────────────────────────────────────────────
+
+class TestDirectNode:
+    """Tests for direct_node — conversational answers without retrieval."""
+
+    @staticmethod
+    def _mock_llm(text: str) -> MagicMock:
+        mock = MagicMock()
+        resp = MagicMock()
+        resp.content = text
+        mock.invoke.return_value = resp
+        return mock
+
+    def test_returns_ai_message(self):
+        """direct_node appends one AIMessage to messages."""
+        from agent.nodes import direct_node
+
+        with patch("agent.nodes._get_llm", return_value=self._mock_llm("Hello!")):
+            result = direct_node(_base_state(query="Hi there"))
+
+        assert "messages" in result
+        assert len(result["messages"]) == 1
+        assert isinstance(result["messages"][0], AIMessage)
+        assert result["messages"][0].content == "Hello!"
+
+    def test_increments_turn_count(self):
+        """direct_node increments turn_count by 1."""
+        from agent.nodes import direct_node
+
+        with patch("agent.nodes._get_llm", return_value=self._mock_llm("Hi!")):
+            result = direct_node(_base_state(turn_count=3))
+
+        assert result["turn_count"] == 4
+
+    def test_sets_empty_context_and_sources(self):
+        """direct_node clears context and sources (no retrieval)."""
+        from agent.nodes import direct_node
+
+        with patch("agent.nodes._get_llm", return_value=self._mock_llm("Hi!")):
+            result = direct_node(_base_state(context="old context", sources=[{"x": 1}]))
+
+        assert result["context"] == ""
+        assert result["sources"] == []
+
+    def test_returns_error_message_on_llm_exception(self):
+        """direct_node returns a fallback message when the LLM raises."""
+        from agent.nodes import direct_node
+
+        mock_llm = MagicMock()
+        mock_llm.invoke.side_effect = Exception("LLM down")
+
+        with patch("agent.nodes._get_llm", return_value=mock_llm):
+            result = direct_node(_base_state())
+
+        assert "messages" in result
+        assert "error" in result
+        assert "error" in result["messages"][0].content.lower() or "encountered" in result["messages"][0].content.lower()

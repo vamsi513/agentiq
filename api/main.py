@@ -10,13 +10,15 @@ Run locally:
     uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
 """
 
+import collections
 import hmac
-import logging
+import time
 import uuid
 from contextlib import asynccontextmanager
 from typing import Optional
 
-from fastapi import Depends, FastAPI, Header, HTTPException, status
+import structlog
+from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
@@ -24,7 +26,26 @@ from api.schemas import ChatRequest, ChatResponse, HealthResponse, SourceItem
 from api.streaming import run_agent_sync, stream_agent_response
 from config import settings
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
+
+# ── Rate limiting (token-bucket per IP, 30 req/min) ──────────────────────────
+_RATE_LIMIT = 30
+_RATE_WINDOW = 60.0
+_rate_counters: dict[str, collections.deque] = collections.defaultdict(collections.deque)
+
+
+def _check_rate_limit(request: Request) -> None:
+    client_ip = request.client.host if request.client else "unknown"
+    now = time.monotonic()
+    timestamps = _rate_counters[client_ip]
+    while timestamps and timestamps[0] < now - _RATE_WINDOW:
+        timestamps.popleft()
+    if len(timestamps) >= _RATE_LIMIT:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Rate limit exceeded. Max {_RATE_LIMIT} requests per minute.",
+        )
+    timestamps.append(now)
 
 
 async def _require_api_key(
@@ -97,6 +118,15 @@ app.add_middleware(
 )
 
 
+@app.middleware("http")
+async def _request_id_middleware(request: Request, call_next):
+    request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
+    with structlog.contextvars.bound_contextvars(request_id=request_id):
+        response = await call_next(request)
+    response.headers["X-Request-ID"] = request_id
+    return response
+
+
 # ── Health endpoint ───────────────────────────────────────────────────────────
 
 @app.get(
@@ -128,7 +158,8 @@ async def health() -> HealthResponse:
     summary="Run agent and return full response",
     tags=["Agent"],
 )
-async def chat(request: ChatRequest, _: None = Depends(_require_api_key)) -> ChatResponse:
+async def chat(request: ChatRequest, req: Request, _: None = Depends(_require_api_key)) -> ChatResponse:
+    _check_rate_limit(req)
     """
     Invoke the AgentIQ graph and return the complete answer as JSON.
 
@@ -185,7 +216,8 @@ async def chat(request: ChatRequest, _: None = Depends(_require_api_key)) -> Cha
     summary="Stream agent response via SSE",
     tags=["Agent"],
 )
-async def chat_stream(request: ChatRequest, _: None = Depends(_require_api_key)) -> StreamingResponse:
+async def chat_stream(request: ChatRequest, req: Request, _: None = Depends(_require_api_key)) -> StreamingResponse:
+    _check_rate_limit(req)
     """
     Invoke the AgentIQ graph and stream the response as Server-Sent Events.
 
