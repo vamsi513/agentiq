@@ -10,11 +10,13 @@ Run locally:
     uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
 """
 
+import hmac
 import logging
 import uuid
 from contextlib import asynccontextmanager
+from typing import Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
@@ -23,6 +25,18 @@ from api.streaming import run_agent_sync, stream_agent_response
 from config import settings
 
 logger = logging.getLogger(__name__)
+
+
+async def _require_api_key(
+    x_api_key: Optional[str] = Header(default=None, alias="X-API-Key"),
+) -> None:
+    """Reject requests that don't carry the configured API key.
+    When AGENTIQ_API_KEY is unset the check is skipped (dev/demo mode)."""
+    if not settings.api_key:
+        return
+    if x_api_key and hmac.compare_digest(x_api_key, settings.api_key):
+        return
+    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or missing API key.")
 
 
 # ── Lifespan (replaces deprecated @app.on_event) ─────────────────────────────
@@ -114,7 +128,7 @@ async def health() -> HealthResponse:
     summary="Run agent and return full response",
     tags=["Agent"],
 )
-async def chat(request: ChatRequest) -> ChatResponse:
+async def chat(request: ChatRequest, _: None = Depends(_require_api_key)) -> ChatResponse:
     """
     Invoke the AgentIQ graph and return the complete answer as JSON.
 
@@ -171,7 +185,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
     summary="Stream agent response via SSE",
     tags=["Agent"],
 )
-async def chat_stream(request: ChatRequest) -> StreamingResponse:
+async def chat_stream(request: ChatRequest, _: None = Depends(_require_api_key)) -> StreamingResponse:
     """
     Invoke the AgentIQ graph and stream the response as Server-Sent Events.
 

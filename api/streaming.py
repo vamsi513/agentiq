@@ -189,14 +189,4 @@ async def run_agent_sync(
 
     except Exception as exc:
         logger.exception("Agent sync run failed: %s", exc)
-        return {
-            "answer": (
-                f"Error: {type(exc).__name__} — "
-                "please check your API keys and try again."
-            ),
-            "sources": [],
-            "route_decision": "direct",
-            "session_id": session_id,
-            "turn_count": 0,
-            "retrieval_score": 0.0,
-        }
+        raise

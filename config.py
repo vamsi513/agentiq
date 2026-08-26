@@ -18,13 +18,24 @@ from dotenv import load_dotenv
 _ENV_FILE = Path(__file__).parent / ".env"
 load_dotenv(dotenv_path=_ENV_FILE, override=False)
 
-# ── Module logger ─────────────────────────────────────────────────────────────
-logging.basicConfig(
-    level=os.getenv("LOG_LEVEL", "INFO").upper(),
-    format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
+# ── Structured JSON logging ────────────────────────────────────────────────────
+import structlog
+
+_log_level = os.getenv("LOG_LEVEL", "INFO").upper()
+logging.basicConfig(format="%(message)s", level=_log_level)
+
+structlog.configure(
+    processors=[
+        structlog.contextvars.merge_contextvars,
+        structlog.stdlib.add_log_level,
+        structlog.stdlib.add_logger_name,
+        structlog.processors.TimeStamper(fmt="iso"),
+        structlog.processors.JSONRenderer(),
+    ],
+    wrapper_class=structlog.make_filtering_bound_logger(logging.getLevelName(_log_level)),
+    logger_factory=structlog.PrintLoggerFactory(),
 )
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class Settings:
@@ -71,6 +82,10 @@ class Settings:
         self.top_k_retrieval: int = int(os.getenv("TOP_K_RETRIEVAL", "5"))
         self.max_web_results: int = int(os.getenv("MAX_WEB_RESULTS", "5"))
         self.enable_query_rewriting: bool = os.getenv("ENABLE_QUERY_REWRITING", "false").lower() == "true"
+        # Optional API key to protect the FastAPI /chat endpoints.
+        # When set, callers must include X-API-Key: <value> in the request header.
+        # Leave unset (default) to allow unauthenticated access (dev/demo mode).
+        self.api_key: str = os.getenv("AGENTIQ_API_KEY", "")
 
         # Logging
         self.log_level: str = os.getenv("LOG_LEVEL", "INFO").upper()

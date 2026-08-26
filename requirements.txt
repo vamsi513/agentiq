@@ -39,3 +39,4 @@ python-dotenv==1.0.1
 
 # ── Observability & Tracing ────────────────────────────────────────────
 langsmith>=0.1.147
+structlog>=24.0
