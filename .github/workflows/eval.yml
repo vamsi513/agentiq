@@ -13,23 +13,30 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4.2.2
-
-      - uses: actions/setup-python@v5.3.0
+      - name: Run evaluation on EC2
+        uses: appleboy/ssh-action@v1.0.3
         with:
-          python-version: "3.11"
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          command_timeout: 30m
+          script: |
+            set -e
+            cd /home/ec2-user/agentiq
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt "ragas>=0.2.0,<0.3.0" datasets
+            # Pull latest eval code
+            git fetch origin main
+            git checkout origin/main -- evaluation/ agent/ api/ requirements.txt
 
-      - name: Run RAGAS evaluation
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
-        run: python -m evaluation.eval_runner
+            # Install eval deps
+            pip install -q -r requirements.txt "ragas>=0.2.0,<0.3.0" datasets 2>&1 | tail -3
 
-      - name: Upload evaluation results
-        uses: actions/upload-artifact@v4
-        with:
-          name: ragas-results
-          path: evaluation/evaluation_results.json
+            # Run evaluation using API keys from .env on the server
+            set -a; source .env; set +a
+            python -m evaluation.eval_runner
+
+            echo ""
+            echo "===== RESULTS JSON ====="
+            cat evaluation/evaluation_results.json
+            echo ""
+            echo "========================"
