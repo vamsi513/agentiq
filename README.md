@@ -69,7 +69,7 @@
 - **PDF upload** — users can upload their own PDFs; text is extracted, chunked, and indexed into FAISS at runtime
 - **LoRA fine-tuning notebook** — `notebooks/finetune_lora.ipynb` demonstrates full PEFT/LoRA fine-tuning on a custom Q&A dataset
 - **Kubernetes manifests** — `k8s/` directory contains Deployment, Service/Ingress, and HPA manifests as a deployment reference
-- **Session rate limiting** — 20-query cap per session with a live progress bar in the sidebar
+- **API rate limiting** — 30 requests/minute per IP enforced at the FastAPI layer; trusted-proxy-aware `X-Forwarded-For` handling for deployments behind nginx
 
 ---
 
@@ -247,6 +247,10 @@ Evaluated on 50 curated AI/ML multi-hop question-answer pairs using RAGAS.
 ```bash
 python -m evaluation.eval_runner
 ```
+
+A **deterministic retrieval evaluation** (no API key required) runs automatically in CI on every push — `tests/test_retrieval_eval.py` checks hit rate across 25 retrieval queries against the FAISS index.
+
+The full RAGAS pipeline can be triggered manually via the **RAGAS Evaluation** workflow in GitHub Actions (requires `OPENAI_API_KEY` secret).
 
 ---
 
