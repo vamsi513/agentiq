@@ -236,7 +236,7 @@ Evaluated on 50 curated AI/ML multi-hop question-answer pairs using RAGAS.
 | Answer Relevancy | **0.6847** |
 | Faithfulness | **0.6862** |
 | Queries Evaluated | **50** |
-| Avg Latency | **6628ms** |
+| Avg Latency | **2776ms** |
 
 ### Route distribution across 50 queries
 
@@ -250,7 +250,7 @@ python -m evaluation.eval_runner
 
 A **deterministic retrieval evaluation** (no API key required) runs automatically in CI on every push — `tests/test_retrieval_eval.py` checks hit rate across 25 retrieval queries against the FAISS index.
 
-The full RAGAS pipeline can be triggered manually via the **RAGAS Evaluation** workflow in GitHub Actions (requires `OPENAI_API_KEY` secret).
+The full RAGAS pipeline can be triggered manually via the **RAGAS Evaluation** workflow in GitHub Actions — it SSHes into EC2 and runs the evaluation there using API keys stored in the server's `.env` file.
 
 ---
 
