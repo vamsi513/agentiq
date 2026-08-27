@@ -12,8 +12,9 @@ Requirements:
     - OPENAI_API_KEY must be set (RAGAS uses OpenAI for scoring)
     - Install dependencies: pip install -r requirements.txt
 
-RAGAS version: 0.1.21
-The API for 0.1.x uses Dataset.from_dict() and evaluate() with metric objects.
+RAGAS version: >=0.2.0
+The 0.2.x API uses class-based metrics and renamed dataset columns:
+  user_input / response / retrieved_contexts / reference
 """
 
 import asyncio
@@ -73,7 +74,7 @@ def _run_ragas(
     contexts: list[list[str]],
 ) -> dict[str, float]:
     """
-    Score the answer set using RAGAS 0.1.21 metrics.
+    Score the answer set using RAGAS 0.2.x metrics.
 
     Args:
         questions: List of question strings.
@@ -87,13 +88,14 @@ def _run_ragas(
     try:
         from datasets import Dataset
         from ragas import evaluate
-        from ragas.metrics import answer_relevancy, faithfulness
+        from ragas.metrics import AnswerRelevancy, Faithfulness
 
+        # RAGAS 0.2.x column names
         data = {
-            "question": questions,
-            "answer": answers,
-            "ground_truths": ground_truths,
-            "contexts": contexts,
+            "user_input": questions,
+            "response": answers,
+            "reference": [gt[0] if gt else "" for gt in ground_truths],
+            "retrieved_contexts": contexts,
         }
 
         dataset = Dataset.from_dict(data)
@@ -101,7 +103,7 @@ def _run_ragas(
         logger.info("Running RAGAS evaluation on %d samples…", len(questions))
         result = evaluate(
             dataset,
-            metrics=[answer_relevancy, faithfulness],
+            metrics=[AnswerRelevancy(), Faithfulness()],
         )
 
         scores = {
@@ -210,7 +212,7 @@ async def run_evaluation(max_queries: int = 50) -> dict[str, Any]:
             "num_queries": len(per_query_results),
             "model": "gpt-4o-mini",
             "embedding_model": "all-MiniLM-L6-v2",
-            "ragas_version": "0.1.21",
+            "ragas_version": "0.2.x",
         },
         "ragas_scores": ragas_scores,
         "aggregate_stats": {
