@@ -87,8 +87,14 @@ def _run_ragas(
     """
     try:
         from datasets import Dataset
+        from langchain_openai import ChatOpenAI, OpenAIEmbeddings
         from ragas import evaluate
+        from ragas.embeddings import LangchainEmbeddingsWrapper
+        from ragas.llms import LangchainLLMWrapper
         from ragas.metrics import AnswerRelevancy, Faithfulness
+
+        llm = LangchainLLMWrapper(ChatOpenAI(model="gpt-4o-mini", temperature=0))
+        embeddings = LangchainEmbeddingsWrapper(OpenAIEmbeddings(model="text-embedding-3-small"))
 
         # RAGAS 0.2.x column names
         data = {
@@ -103,7 +109,10 @@ def _run_ragas(
         logger.info("Running RAGAS evaluation on %d samples…", len(questions))
         result = evaluate(
             dataset,
-            metrics=[AnswerRelevancy(), Faithfulness()],
+            metrics=[
+                AnswerRelevancy(llm=llm, embeddings=embeddings),
+                Faithfulness(llm=llm),
+            ],
         )
 
         df = result.to_pandas()
