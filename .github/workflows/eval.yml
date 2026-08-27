@@ -1,0 +1,35 @@
+name: RAGAS Evaluation
+
+on:
+  workflow_dispatch:
+    inputs:
+      max_queries:
+        description: "Number of queries to evaluate (max 50)"
+        required: false
+        default: "50"
+
+jobs:
+  ragas-eval:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4.2.2
+
+      - uses: actions/setup-python@v5.3.0
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt ragas==0.1.21 datasets
+
+      - name: Run RAGAS evaluation
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+        run: python -m evaluation.eval_runner
+
+      - name: Upload evaluation results
+        uses: actions/upload-artifact@v4
+        with:
+          name: ragas-results
+          path: evaluation/evaluation_results.json
