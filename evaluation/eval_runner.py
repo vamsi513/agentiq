@@ -133,22 +133,16 @@ def _run_ragas(
 
 # ── Main pipeline ─────────────────────────────────────────────────────────────
 
-async def run_evaluation(max_queries: int = 50) -> dict[str, Any]:
+async def _collect_answers(
+    queries_data: list[dict],
+) -> tuple[list, list, list, list, list]:
     """
-    Full evaluation pipeline: run agent on test queries → score with RAGAS.
+    Run all queries through the agent and return collected inputs for RAGAS.
 
-    Args:
-        max_queries: Cap on number of queries to evaluate (default: all 50).
-
-    Returns:
-        Full results dict written to evaluation_results.json.
+    Separated from RAGAS scoring so the event loop is closed before
+    evaluate() runs — RAGAS 0.2.x internally creates its own loop and
+    fails silently when one is already active.
     """
-    logger.info("Loading test queries from %s", _QUERIES_FILE)
-    queries_data = json.loads(_QUERIES_FILE.read_text(encoding="utf-8"))
-    queries_data = queries_data[:max_queries]
-
-    logger.info("Running AgentIQ on %d queries…", len(queries_data))
-
     questions: list[str] = []
     answers: list[str] = []
     ground_truths: list[list[str]] = []
@@ -201,11 +195,38 @@ async def run_evaluation(max_queries: int = 50) -> dict[str, Any]:
             }
         )
 
-        # Small delay to avoid rate limiting
         if i < len(queries_data):
             await asyncio.sleep(0.5)
 
-    # ── RAGAS scoring ─────────────────────────────────────────────────────────
+    return questions, answers, ground_truths, contexts, per_query_results
+
+
+def run_evaluation(max_queries: int = 50) -> dict[str, Any]:
+    """
+    Full evaluation pipeline: run agent on test queries → score with RAGAS.
+
+    The agent collection phase runs inside asyncio.run() so the event loop
+    is fully closed before _run_ragas() is called. RAGAS 0.2.x's evaluate()
+    creates its own internal loop and silently fails when one already exists.
+
+    Args:
+        max_queries: Cap on number of queries to evaluate (default: all 50).
+
+    Returns:
+        Full results dict written to evaluation_results.json.
+    """
+    logger.info("Loading test queries from %s", _QUERIES_FILE)
+    queries_data = json.loads(_QUERIES_FILE.read_text(encoding="utf-8"))
+    queries_data = queries_data[:max_queries]
+
+    logger.info("Running AgentIQ on %d queries…", len(queries_data))
+
+    # Phase 1: collect agent answers (async) — loop is closed when done
+    questions, answers, ground_truths, contexts, per_query_results = asyncio.run(
+        _collect_answers(queries_data)
+    )
+
+    # Phase 2: RAGAS scoring (sync) — no active event loop at this point
     logger.info("Scoring with RAGAS…")
     ragas_scores = _run_ragas(questions, answers, ground_truths, contexts)
 
@@ -264,7 +285,7 @@ def main() -> None:
     print("Running 50 test queries through the agent…")
     print("This will take several minutes due to API rate limits.\n")
 
-    results = asyncio.run(run_evaluation(max_queries=50))
+    results = run_evaluation(max_queries=50)
 
     scores = results["ragas_scores"]
     stats = results["aggregate_stats"]
