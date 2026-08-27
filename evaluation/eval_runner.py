@@ -106,9 +106,10 @@ def _run_ragas(
             metrics=[AnswerRelevancy(), Faithfulness()],
         )
 
+        df = result.to_pandas()
         scores = {
-            "answer_relevancy": round(float(result["answer_relevancy"]), 4),
-            "faithfulness": round(float(result["faithfulness"]), 4),
+            "answer_relevancy": round(float(df["answer_relevancy"].mean()), 4),
+            "faithfulness": round(float(df["faithfulness"].mean()), 4),
         }
         logger.info("RAGAS scores: %s", scores)
         return scores
