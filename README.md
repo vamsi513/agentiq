@@ -236,7 +236,7 @@ Evaluated on 50 curated AI/ML multi-hop question-answer pairs using RAGAS.
 | Answer Relevancy | **0.6847** |
 | Faithfulness | **0.6862** |
 | Queries Evaluated | **50** |
-| Avg Latency | **2776ms** |
+| Avg Latency | **6628ms** |
 
 ### Route distribution across 50 queries
 
