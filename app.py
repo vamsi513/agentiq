@@ -452,7 +452,7 @@ def _stream_agent_response(
                 # ── Tokens from generator LLM call ────────────────────────────
                 if kind == "on_chat_model_stream":
                     node_name = event.get("metadata", {}).get("langgraph_node", "")
-                    if node_name == "generator":
+                    if node_name in ("generator", "direct"):
                         chunk = event.get("data", {}).get("chunk")
                         if chunk and hasattr(chunk, "content") and chunk.content:
                             token_queue.put(("token", chunk.content))

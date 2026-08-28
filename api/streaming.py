@@ -83,8 +83,11 @@ async def stream_agent_response(
     3. ``done``  — stream termination signal (always sent last).
     4. ``error`` — on failure, followed immediately by ``done``.
 
-    Token detection uses ``metadata.langgraph_node == "generator"`` which is
-    the correct LangGraph 0.2.x field — NOT the top-level event ``name``.
+    Token detection uses ``metadata.langgraph_node`` (the correct LangGraph
+    0.2.x field — NOT the top-level event ``name``), checked against both
+    "generator" (retrieval/web_search routes) and "direct" (the direct-
+    answer route, which streams its own LLM call rather than going through
+    the generator node).
 
     Sources are captured from retriever/web_search ``on_chain_end`` output
     dicts.  Generator output is intentionally excluded because it only
@@ -119,7 +122,7 @@ async def stream_agent_response(
             # Use metadata.langgraph_node (not event name) to identify the node.
             if kind == "on_chat_model_stream":
                 node_name = event.get("metadata", {}).get("langgraph_node", "")
-                if node_name == "generator":
+                if node_name in ("generator", "direct"):
                     chunk = event.get("data", {}).get("chunk")
                     if chunk and hasattr(chunk, "content") and chunk.content:
                         yield _sse("token", chunk.content)
