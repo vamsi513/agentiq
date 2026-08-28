@@ -16,6 +16,11 @@ const nextConfig: NextConfig = {
           key: "Content-Security-Policy",
           value: [
             "default-src 'self'",
+            // Nonce-based script-src would let us drop unsafe-inline/unsafe-eval,
+            // but that requires forcing every page to render dynamically (Next.js
+            // has no nonce mechanism for statically prerendered pages). This
+            // app's home page is intentionally static for fast loads and CDN
+            // caching, so that trade isn't worth it for the marginal CSP gain.
             "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
             "font-src 'self' https://fonts.gstatic.com",
