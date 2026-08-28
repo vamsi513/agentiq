@@ -266,7 +266,7 @@ The full RAGAS pipeline is triggered via the **RAGAS Evaluation** workflow in Gi
 Receives the user query and uses GPT-4o-mini to decide between `retrieval`, `web_search`, or `direct`. Unknown responses default to `retrieval`.
 
 ### Retriever Node
-Queries the FAISS vector index (or Pinecone if configured). The query is encoded with `all-MiniLM-L6-v2`, L2-normalised, and searched via cosine similarity. LlamaIndex provides an alternative ingestion and retrieval path for directory-based document loading.
+Queries the FAISS vector index. The query is encoded with `all-MiniLM-L6-v2`, L2-normalised, and searched via cosine similarity. Pinecone and LlamaIndex modules are standalone reference implementations and are not connected to the live graph.
 
 ### Web Search Node
 Calls Tavily with `search_depth="advanced"`. Falls back gracefully if Tavily is unavailable — the app never crashes.
