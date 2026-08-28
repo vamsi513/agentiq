@@ -8,25 +8,33 @@ on:
         required: false
         default: "50"
 
+permissions:
+  contents: write
+
 jobs:
   ragas-eval:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Run evaluation on EC2
+        id: eval
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
           command_timeout: 30m
+          capture_stdout: true
           script: |
             set -e
             cd /home/ec2-user/agentiq
 
             # Pull latest eval code
-            git fetch origin main
-            git checkout origin/main -- evaluation/ agent/ api/ requirements.txt
+            git fetch origin master
+            git checkout origin/master -- evaluation/ agent/ api/ requirements.txt
 
             # Install eval deps
             pip install -q -r requirements.txt "ragas>=0.2.0,<0.3.0" datasets 2>&1 | tail -3
@@ -35,8 +43,37 @@ jobs:
             set -a; source .env; set +a
             python -m evaluation.eval_runner
 
-            echo ""
-            echo "===== RESULTS JSON ====="
+            echo "===EVAL_RESULTS_JSON_START==="
             cat evaluation/evaluation_results.json
-            echo ""
-            echo "========================"
+            echo "===EVAL_RESULTS_JSON_END==="
+
+      - name: Extract and commit results
+        env:
+          EVAL_STDOUT: ${{ steps.eval.outputs.stdout }}
+        run: |
+          python3 - <<'PYEOF'
+          import os
+          import re
+          import sys
+
+          text = os.environ["EVAL_STDOUT"]
+          m = re.search(
+              r"===EVAL_RESULTS_JSON_START===\n(.*?)\n===EVAL_RESULTS_JSON_END===",
+              text, re.DOTALL,
+          )
+          if not m:
+              print("Could not find results JSON markers in eval output.", file=sys.stderr)
+              sys.exit(1)
+          with open("evaluation/evaluation_results.json", "w") as f:
+              f.write(m.group(1).strip() + "\n")
+          PYEOF
+
+          if git diff --quiet evaluation/evaluation_results.json; then
+            echo "No change in eval results — skipping commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add evaluation/evaluation_results.json
+          git commit -m "chore: update RAGAS eval results from workflow run ${{ github.run_id }}"
+          git push origin HEAD:master
