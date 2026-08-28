@@ -248,20 +248,22 @@ Evaluated on 50 test queries spanning all three routing paths — retrieval, dir
 
 | Metric | Score |
 |---|---|
-| Answer Relevancy | **0.7317** |
-| Faithfulness | **0.6917** |
+| Answer Relevancy | **0.6875** |
+| Faithfulness | **0.6743** |
 | Queries Evaluated | **50** |
-| Avg Latency | **3513ms** |
+| Avg Latency | **3091ms** |
 
-### Route distribution across 50 queries
+### Router accuracy: 50/50 (100%)
 
-| Route | Count | % |
-|---|---|---|
-| Document Retrieval | 25 | 50% |
-| Direct Answer | 13 | 26% |
-| Web Search | 12 | 24% |
+Each query carries a ground-truth expected route (verified against the live router before being added to the test set). `evaluation/eval_runner.py` compares the router's actual `route_decision` against that label per query and reports a full confusion matrix — not just an aggregate route count, which can look correct even when individual queries are misrouted if two errors happen to cancel out in the totals.
 
-Each query is labeled by which route it's actually expected to take (verified against the live router before being added to the test set), so this distribution reflects real routing behavior across all three paths rather than a retrieval-only test set.
+| Expected route | Correct | Total | Accuracy |
+|---|---|---|---|
+| Document Retrieval | 25 | 25 | 100% |
+| Direct Answer | 13 | 13 | 100% |
+| Web Search | 12 | 12 | 100% |
+
+Zero misrouted queries on the last real run against production (`evaluation/evaluation_results.json`, committed automatically by the RAGAS Evaluation workflow).
 
 ```bash
 python -m evaluation.eval_runner
