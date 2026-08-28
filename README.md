@@ -161,10 +161,15 @@ LANGCHAIN_API_KEY=your-langsmith-api-key
 LANGCHAIN_TRACING_V2=true
 LANGCHAIN_PROJECT=agentiq
 
-# Pinecone (optional — uses FAISS by default)
+# Pinecone (optional — reference implementation only, not wired into the live agent)
 PINECONE_API_KEY=your-pinecone-api-key
 PINECONE_INDEX=agentiq-docs
 PINECONE_ENV=us-east-1
+
+# API security (optional — unset means open/dev mode)
+AGENTIQ_API_KEY=                    # requires X-API-Key header when set
+ALLOWED_ORIGINS=                    # comma-separated CORS origins; unset allows all
+TRUSTED_PROXY_IPS=127.0.0.1         # proxies trusted to set X-Forwarded-For
 
 # Model defaults
 OPENAI_MODEL=gpt-4o-mini
@@ -194,8 +199,8 @@ agentiq/
 ├── retrieval/
 │   ├── vectorstore.py              # FAISS index: build, persist, query
 │   ├── embeddings.py               # sentence-transformers wrapper
-│   ├── llamaindex_loader.py        # LlamaIndex VectorStoreIndex (alternative pipeline)
-│   ├── pinecone_store.py           # Pinecone cloud vector store
+│   ├── llamaindex_loader.py        # LlamaIndex VectorStoreIndex (reference only, not wired in)
+│   ├── pinecone_store.py           # Pinecone cloud vector store (reference only, not wired in)
 │   └── documents/
 │       └── sample_docs.txt         # 30 AI/ML research documents
 ├── observability/
