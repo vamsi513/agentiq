@@ -207,3 +207,34 @@ a {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.2; }
 }
+
+/* ============================================================
+   Markdown rendering inside chat bubbles
+   ============================================================ */
+.markdown p {
+  margin: 0 0 0.75em;
+}
+.markdown p:last-child {
+  margin-bottom: 0;
+}
+.markdown ul,
+.markdown ol {
+  margin: 0 0 0.75em;
+  padding-left: 1.25em;
+}
+.markdown li {
+  margin-bottom: 0.25em;
+}
+.markdown strong {
+  font-weight: 700;
+}
+.markdown code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: var(--surface-2);
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+}
+.markdown a {
+  color: var(--accent);
+}

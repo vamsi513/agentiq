@@ -12,6 +12,7 @@ import {
   Globe,
   MessageCircle,
 } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 import { streamChat } from "@/lib/api";
 import type { ChatMessage, RouteDecision, SourceItem } from "@/lib/types";
 
@@ -123,9 +124,15 @@ function MessageBubble({ message }: { message: ChatMessage }) {
         )}
         <div
           aria-live={!isUser ? "polite" : undefined}
-          style={styles.bubbleText}
+          style={{ ...styles.bubbleText, whiteSpace: isUser ? "pre-wrap" : "normal" }}
         >
-          {message.content || (message.streaming ? "" : "")}
+          {isUser ? (
+            message.content
+          ) : (
+            <div className="markdown">
+              <ReactMarkdown>{message.content}</ReactMarkdown>
+            </div>
+          )}
           {message.streaming && <span style={styles.cursor} aria-hidden="true" />}
         </div>
         {!isUser && message.sources && <SourcesList sources={message.sources} />}
@@ -452,7 +459,6 @@ const styles: Record<string, React.CSSProperties> = {
   bubbleText: {
     fontSize: "14.5px",
     lineHeight: 1.65,
-    whiteSpace: "pre-wrap",
     wordBreak: "break-word",
   },
   cursor: {
