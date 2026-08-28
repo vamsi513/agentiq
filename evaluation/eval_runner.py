@@ -201,6 +201,56 @@ async def _collect_answers(
     return questions, answers, ground_truths, contexts, per_query_results
 
 
+def _compute_router_accuracy(per_query_results: list[dict[str, Any]]) -> dict[str, Any]:
+    """
+    Compare each query's actual route_decision against its expected
+    context_type label.
+
+    The raw route_distribution counts (how many queries landed on each
+    route overall) can look correct even when individual queries are
+    misrouted -- two queries swapping expected routes cancel out in the
+    aggregate. This computes real per-query correctness instead.
+
+    Returns:
+        Dict with overall accuracy, per-expected-route accuracy, and a
+        confusion matrix of {expected: {actual: count}}.
+    """
+    total = len(per_query_results)
+    correct = 0
+    confusion: dict[str, dict[str, int]] = {}
+    per_route_totals: dict[str, int] = {}
+    per_route_correct: dict[str, int] = {}
+    misrouted: list[dict[str, str]] = []
+
+    for r in per_query_results:
+        expected = r["context_type"]
+        actual = r["route_decision"]
+
+        per_route_totals[expected] = per_route_totals.get(expected, 0) + 1
+        confusion.setdefault(expected, {})
+        confusion[expected][actual] = confusion[expected].get(actual, 0) + 1
+
+        if actual == expected:
+            correct += 1
+            per_route_correct[expected] = per_route_correct.get(expected, 0) + 1
+        else:
+            misrouted.append({"id": r["id"], "question": r["question"], "expected": expected, "actual": actual})
+
+    per_route_accuracy = {
+        route: round(per_route_correct.get(route, 0) / count, 4)
+        for route, count in per_route_totals.items()
+    }
+
+    return {
+        "overall_accuracy": round(correct / total, 4) if total else 0.0,
+        "correct": correct,
+        "total": total,
+        "per_route_accuracy": per_route_accuracy,
+        "confusion_matrix": confusion,
+        "misrouted_queries": misrouted,
+    }
+
+
 def run_evaluation(max_queries: int = 50) -> dict[str, Any]:
     """
     Full evaluation pipeline: run agent on test queries → score with RAGAS.
@@ -237,6 +287,8 @@ def run_evaluation(max_queries: int = 50) -> dict[str, Any]:
         route = r["route_decision"]
         route_counts[route] = route_counts.get(route, 0) + 1
 
+    router_accuracy = _compute_router_accuracy(per_query_results)
+
     results = {
         "metadata": {
             "timestamp": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
@@ -246,6 +298,7 @@ def run_evaluation(max_queries: int = 50) -> dict[str, Any]:
             "ragas_version": "0.2.x",
         },
         "ragas_scores": ragas_scores,
+        "router_accuracy": router_accuracy,
         "aggregate_stats": {
             "avg_latency_ms": round(sum(latencies) / len(latencies), 1),
             "min_latency_ms": min(latencies),
@@ -298,6 +351,15 @@ def main() -> None:
     print(f"  Faithfulness      : {scores.get('faithfulness', 'N/A'):.4f}")
     print(f"  Avg Latency       : {stats['avg_latency_ms']} ms")
     print(f"  Route distribution: {stats['route_distribution']}")
+
+    accuracy = results["router_accuracy"]
+    print(f"\n  Router accuracy   : {accuracy['overall_accuracy']:.2%} ({accuracy['correct']}/{accuracy['total']})")
+    print(f"  Per-route accuracy: {accuracy['per_route_accuracy']}")
+    if accuracy["misrouted_queries"]:
+        print(f"  Misrouted queries ({len(accuracy['misrouted_queries'])}):")
+        for m in accuracy["misrouted_queries"]:
+            print(f"    [{m['id']}] expected={m['expected']} actual={m['actual']} — {m['question'][:60]}")
+
     print(f"\n  Results saved to: {_RESULTS_FILE}")
     print("=" * 60 + "\n")
 
