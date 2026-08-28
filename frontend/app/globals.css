@@ -1,0 +1,209 @@
+/* ============================================================
+   CSS Variables — dark-first (matches the Streamlit app's theme),
+   light mode fully supported via prefers-color-scheme / data-theme.
+   ============================================================ */
+:root {
+  --bg: #0f172a;
+  --surface-1: #1e293b;
+  --surface-2: #24304a;
+  --surface-3: #2c3a58;
+  --border: #334155;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --accent: #7c3aed;
+  --accent-hover: #8b5cf6;
+  --accent-subtle: rgba(124, 58, 237, 0.18);
+  --accent-fg: #ffffff;
+
+  --route-retrieval: #3b82f6;
+  --route-retrieval-bg: rgba(59, 130, 246, 0.14);
+  --route-web-search: #10b981;
+  --route-web-search-bg: rgba(16, 185, 129, 0.14);
+  --route-direct: #f59e0b;
+  --route-direct-bg: rgba(245, 158, 11, 0.14);
+  --danger: #ef4444;
+  --danger-bg: rgba(239, 68, 68, 0.14);
+
+  --font-sans: var(--font-inter, 'Inter', system-ui, sans-serif);
+  --font-mono: var(--font-jetbrains, 'JetBrains Mono', 'Fira Code', monospace);
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f8f9fc;
+    --surface-1: #ffffff;
+    --surface-2: #f1f2f6;
+    --surface-3: #e8eaef;
+    --border: #dde1ea;
+    --text-primary: #0f1117;
+    --text-secondary: #4b5263;
+    --text-muted: #8b92a5;
+    --accent: #7c3aed;
+    --accent-hover: #6d28d9;
+    --accent-subtle: rgba(124, 58, 237, 0.1);
+    --accent-fg: #ffffff;
+  }
+}
+
+:root[data-theme="light"] {
+  --bg: #f8f9fc;
+  --surface-1: #ffffff;
+  --surface-2: #f1f2f6;
+  --surface-3: #e8eaef;
+  --border: #dde1ea;
+  --text-primary: #0f1117;
+  --text-secondary: #4b5263;
+  --text-muted: #8b92a5;
+  --accent: #7c3aed;
+  --accent-hover: #6d28d9;
+  --accent-subtle: rgba(124, 58, 237, 0.1);
+  --accent-fg: #ffffff;
+}
+
+/* ============================================================
+   Reset & Base
+   ============================================================ */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--text-primary);
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+button, input, textarea {
+  font-family: inherit;
+  color: inherit;
+}
+
+a {
+  color: var(--accent);
+}
+
+/* ============================================================
+   Visually-hidden utility (for the always-present <h1>)
+   ============================================================ */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ============================================================
+   Skip nav
+   ============================================================ */
+.skip-nav {
+  position: absolute;
+  top: -999px;
+  left: -999px;
+  background: var(--accent);
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 4px;
+  z-index: 9999;
+  font-size: 14px;
+}
+.skip-nav:focus {
+  top: 12px;
+  left: 12px;
+}
+
+/* ============================================================
+   Layout shell
+   ============================================================ */
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.main-content {
+  flex: 1;
+  min-width: 0;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ============================================================
+   Mobile sidebar toggle — CSS-driven, never inline styles, so it
+   cannot be silently overridden by a component's inline `style` prop.
+   ============================================================ */
+@media (max-width: 768px) {
+  .app-shell > aside {
+    display: none !important;
+  }
+  .app-shell > button[aria-label="Open navigation"] {
+    display: flex !important;
+  }
+  .main-content {
+    padding-top: 52px;
+  }
+}
+
+/* ============================================================
+   Scrollbar
+   ============================================================ */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* ============================================================
+   Focus visible
+   ============================================================ */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* ============================================================
+   Reduced motion
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ============================================================
+   Shared keyframes
+   ============================================================ */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
