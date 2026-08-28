@@ -12,13 +12,21 @@
 
 ## Live Demo
 
-**[AgentIQ on Streamlit Cloud](https://agentiq-qgjmzy665qcpysoctz7app.streamlit.app)**
+**[AgentIQ (Next.js)](https://agentiq-platform.vercel.app)** — streaming chat UI, calls the FastAPI backend directly
+
+**[AgentIQ on Streamlit Cloud](https://agentiq-qgjmzy665qcpysoctz7app.streamlit.app)** — original UI, also supports PDF upload
+
+![AgentIQ chat UI showing a streamed, cited retrieval answer](docs/screenshot.png)
 
 ---
 
 ## Screenshots
 
-### App overview
+### Next.js chat UI
+
+![AgentIQ chat UI showing a streamed, cited retrieval answer](docs/screenshot.png)
+
+### Streamlit app overview
 
 ![AgentIQ home](screenshots/agentiq-home.png)
 
@@ -188,6 +196,10 @@ LOG_LEVEL=INFO
 ```
 agentiq/
 ├── app.py                          # Streamlit frontend entry point
+├── frontend/                       # Next.js chat UI (calls the FastAPI backend directly)
+│   ├── app/page.tsx                # Chat interface — streaming, route badges, sources
+│   ├── app/pipeline/page.tsx       # Architecture explainer page
+│   └── app/api/chat/               # Server-side proxy routes (chat, chat/stream)
 ├── config.py                       # Central config — loads from .env
 ├── requirements.txt                # Pinned runtime dependencies
 ├── Dockerfile                      # Container image
@@ -224,6 +236,7 @@ agentiq/
     ├── test_agent.py
     ├── test_api.py
     ├── test_retrieval.py
+    ├── test_streaming.py           # SSE token-filtering regression tests
     └── test_tools.py
 ```
 
@@ -299,6 +312,16 @@ curl -X POST http://localhost:8000/chat \
 ---
 
 ## Deployment
+
+### Next.js frontend (Vercel)
+
+```bash
+cd frontend
+npm install
+npm run dev          # local dev at http://localhost:3000
+```
+
+Set `AGENTIQ_API_URL` (defaults to the live EC2 backend if unset) in Vercel's project settings, or in `frontend/.env.local` for local dev. Deploy with `vercel --prod` from inside `frontend/`.
 
 ### Streamlit Cloud
 
