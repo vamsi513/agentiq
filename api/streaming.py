@@ -6,6 +6,7 @@ SSE-formatted chunks as the answer is produced.  The Streamlit frontend
 and any SSE-capable client can consume this stream directly.
 
 SSE event format (each chunk is a JSON-encoded payload):
+    data: {"type": "route",   "data": "retrieval"}\\n\\n
     data: {"type": "token",   "data": "Hello"}\\n\\n
     data: {"type": "sources", "data": [...]}\\n\\n
     data: {"type": "done",    "data": null}\\n\\n
@@ -78,10 +79,18 @@ async def stream_agent_response(
     Run the AgentIQ graph and stream SSE chunks to the caller.
 
     Event sequence:
-    1. ``token`` — one per LLM output token from the generator node.
-    2. ``sources`` — list of cited sources (after all tokens).
-    3. ``done``  — stream termination signal (always sent last).
-    4. ``error`` — on failure, followed immediately by ``done``.
+    1. ``route``   — the router's decision (retrieval/web_search/direct),
+                     sent once the router node completes, before any tokens.
+    2. ``token``   — one per LLM output token from the generator node.
+    3. ``sources`` — list of cited sources (after all tokens).
+    4. ``done``    — stream termination signal (always sent last).
+    5. ``error``   — on failure, followed immediately by ``done``.
+
+    The route is sent as its own event rather than left for the client to
+    infer from whether sources arrived — a failed retrieval/web_search call
+    (network error, empty index) legitimately produces zero sources, and a
+    client inferring route from source presence alone would mislabel that
+    as the direct route instead of showing the real path that failed.
 
     Token detection uses ``metadata.langgraph_node`` (the correct LangGraph
     0.2.x field — NOT the top-level event ``name``), checked against both
@@ -127,13 +136,17 @@ async def stream_agent_response(
                     if chunk and hasattr(chunk, "content") and chunk.content:
                         yield _sse("token", chunk.content)
 
-            # ── Capture sources from retriever or web_search output ───────────
+            # ── Capture the router's decision and sources from earlier nodes ──
             # Generator only returns messages — sources come from earlier nodes.
             elif kind == "on_chain_end":
                 node_name = event.get("name", "")
-                if node_name in ("retriever", "web_search"):
-                    output = event.get("data", {}).get("output", {})
-                    if isinstance(output, dict) and output.get("sources"):
+                output = event.get("data", {}).get("output", {})
+                if node_name == "router" and isinstance(output, dict):
+                    route = output.get("route_decision", "")
+                    if route:
+                        yield _sse("route", route)
+                elif node_name in ("retriever", "web_search") and isinstance(output, dict):
+                    if output.get("sources"):
                         captured_sources = output["sources"]
 
         # Emit collected sources then terminate

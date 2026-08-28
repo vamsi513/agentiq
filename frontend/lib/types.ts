@@ -25,14 +25,12 @@ export interface ChatResponse {
 export interface HealthResponse {
   status: string;
   version: string;
-  openai_configured: boolean;
-  tavily_configured: boolean;
 }
 
 /** A single Server-Sent Event chunk emitted by POST /chat/stream. */
 export interface StreamChunk {
-  type: "token" | "sources" | "done" | "error";
-  data: string | SourceItem[] | null;
+  type: "route" | "token" | "sources" | "done" | "error";
+  data: RouteDecision | string | SourceItem[] | null;
 }
 
 /** A message in the client-side conversation view. */

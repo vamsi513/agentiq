@@ -76,17 +76,20 @@ class HealthResponse(BaseModel):
     """
     Response body for the GET /health endpoint.
 
+    Deliberately minimal — this is a public, unauthenticated liveness check
+    (hit by anyone, including the EC2 deploy script's health-check loop), so
+    it reports only that the service is up, not which providers are
+    configured. Nothing in either frontend actually reads provider-config
+    flags over HTTP; app.py checks settings directly since it runs
+    in-process.
+
     Attributes:
         status: Always ``"ok"`` when the service is running.
         version: API version string.
-        openai_configured: Whether the OpenAI API key is set.
-        tavily_configured: Whether the Tavily API key is set.
     """
 
     status: str = "ok"
     version: str = "1.0.0"
-    openai_configured: bool
-    tavily_configured: bool
 
 
 class StreamChunk(BaseModel):

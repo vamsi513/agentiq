@@ -177,17 +177,15 @@ async def _request_id_middleware(request: Request, call_next):
 )
 async def health() -> HealthResponse:
     """
-    Return API health status and configuration flags.
+    Return API liveness status.
+
+    Deliberately minimal — public and unauthenticated, so it doesn't
+    disclose which providers are configured.
 
     Returns:
-        HealthResponse with status, version, and API key presence flags.
+        HealthResponse with status and version only.
     """
-    return HealthResponse(
-        status="ok",
-        version="1.0.0",
-        openai_configured=settings.is_openai_configured(),
-        tavily_configured=settings.is_tavily_configured(),
-    )
+    return HealthResponse(status="ok", version="1.0.0")
 
 
 # ── Non-streaming chat endpoint ───────────────────────────────────────────────

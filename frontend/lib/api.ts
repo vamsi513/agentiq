@@ -1,4 +1,4 @@
-import type { ChatRequest, ChatResponse, StreamChunk } from "./types";
+import type { ChatRequest, ChatResponse, RouteDecision, StreamChunk } from "./types";
 
 export async function sendChat(request: ChatRequest): Promise<ChatResponse> {
   const response = await fetch("/api/chat", {
@@ -18,6 +18,7 @@ export async function sendChat(request: ChatRequest): Promise<ChatResponse> {
 }
 
 export interface StreamCallbacks {
+  onRoute: (route: RouteDecision) => void;
   onToken: (chunk: string) => void;
   onSources: (sources: StreamChunk["data"] & unknown[]) => void;
   onDone: () => void;
@@ -76,6 +77,9 @@ export async function streamChat(
         }
 
         switch (parsed.type) {
+          case "route":
+            if (typeof parsed.data === "string") callbacks.onRoute(parsed.data as RouteDecision);
+            break;
           case "token":
             if (typeof parsed.data === "string") callbacks.onToken(parsed.data);
             break;

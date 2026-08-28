@@ -28,10 +28,13 @@ class TestHealthEndpoint:
         response = client.get("/health")
         assert "version" in response.json()
 
-    def test_health_includes_api_key_flags(self):
+    def test_health_is_minimal_and_does_not_leak_provider_config(self):
+        """/health is public and unauthenticated — it must not disclose which
+        providers are configured, only that the service is up."""
         data = client.get("/health").json()
-        assert "openai_configured" in data
-        assert "tavily_configured" in data
+        assert data["status"] == "ok"
+        assert "openai_configured" not in data
+        assert "tavily_configured" not in data
 
 
 # ── Request-ID middleware ─────────────────────────────────────────────────────

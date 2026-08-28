@@ -91,23 +91,14 @@ function SourcesList({ sources }: { sources: SourceItem[] }) {
   );
 }
 
-/**
- * The SSE stream doesn't carry a dedicated "route" event — sources carry a
- * `type` field that mirrors route_decision for retrieval/web_search, and an
- * empty-sources, non-error, finished message is the direct route. Computed
- * at render time (not via a state-syncing effect) to avoid feeding back
- * into setState on every render.
- */
-function inferRoute(message: ChatMessage): RouteDecision | undefined {
-  if (message.role !== "assistant" || message.streaming || message.error) return undefined;
-  if (message.sources && message.sources.length > 0) return message.sources[0].type;
-  if (message.latencyMs !== undefined) return "direct";
-  return undefined;
-}
-
 function MessageBubble({ message }: { message: ChatMessage }) {
   const isUser = message.role === "user";
-  const route = inferRoute(message);
+  // Route comes from the backend's explicit "route" SSE event (set via
+  // onRoute in runQuery) rather than being inferred from whether sources
+  // arrived — a failed retrieval/web_search call legitimately produces zero
+  // sources, and inferring from that alone would mislabel the failure as
+  // the direct route instead of showing which path actually ran.
+  const route = !isUser && !message.streaming ? message.routeDecision : undefined;
   return (
     <div style={{ ...styles.messageRow, justifyContent: isUser ? "flex-end" : "flex-start" }}>
       <div
@@ -190,6 +181,11 @@ export default function ChatPage() {
       await streamChat(
         { query: trimmed, session_id: sessionIdRef.current },
         {
+          onRoute: (route) => {
+            setMessages((prev) =>
+              prev.map((m) => (m.id === assistantId ? { ...m, routeDecision: route } : m))
+            );
+          },
           onToken: (chunk) => {
             setMessages((prev) =>
               prev.map((m) => (m.id === assistantId ? { ...m, content: m.content + chunk } : m))

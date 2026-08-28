@@ -27,6 +27,14 @@ def _chat_model_stream_event(node_name: str, text: str) -> dict:
     }
 
 
+def _chain_end_event(node_name: str, output: dict) -> dict:
+    return {
+        "event": "on_chain_end",
+        "name": node_name,
+        "data": {"output": output},
+    }
+
+
 def _make_graph(events: list[dict]) -> MagicMock:
     graph = MagicMock()
 
@@ -76,3 +84,40 @@ class TestStreamAgentResponse:
 
         tokens = [c for c in chunks if "\"type\": \"token\"" in c]
         assert tokens == []
+
+    @pytest.mark.asyncio
+    async def test_emits_explicit_route_event(self):
+        """The router's decision is sent as its own event, not inferred from sources.
+
+        Regression coverage: a failed retrieval/web_search call legitimately
+        produces zero sources, and a client inferring route from source
+        presence alone would mislabel that as the direct route rather than
+        showing which path actually failed.
+        """
+        graph = _make_graph([
+            _chain_end_event("router", {"route_decision": "retrieval"}),
+            _chat_model_stream_event("generator", "Grounded answer"),
+        ])
+
+        with patch("agent.graph.get_graph", return_value=graph):
+            chunks = [c async for c in stream_agent_response("query", "session-4")]
+
+        route_events = [json.loads(c.removeprefix("data: ").strip())["data"] for c in chunks if "\"type\": \"route\"" in c]
+        assert route_events == ["retrieval"]
+
+    @pytest.mark.asyncio
+    async def test_route_event_sent_even_with_zero_sources(self):
+        """A retrieval/web_search route that returns no sources still reports its real route."""
+        graph = _make_graph([
+            _chain_end_event("router", {"route_decision": "web_search"}),
+            _chain_end_event("web_search", {"sources": []}),
+            _chat_model_stream_event("generator", "No results found."),
+        ])
+
+        with patch("agent.graph.get_graph", return_value=graph):
+            chunks = [c async for c in stream_agent_response("query", "session-5")]
+
+        route_events = [json.loads(c.removeprefix("data: ").strip())["data"] for c in chunks if "\"type\": \"route\"" in c]
+        sources_events = [c for c in chunks if "\"type\": \"sources\"" in c]
+        assert route_events == ["web_search"]
+        assert sources_events == []
