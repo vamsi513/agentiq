@@ -2,12 +2,12 @@
 tests/test_api.py — Tests for API middleware: rate limiting and request-ID propagation.
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 from fastapi.testclient import TestClient
 
-from api.main import app, _rate_counters, _RATE_LIMIT
+from api.main import _RATE_LIMIT, _rate_counters, app
 
 client = TestClient(app)
 
@@ -63,8 +63,9 @@ class TestRateLimiting:
 
     def test_requests_within_limit_succeed(self):
         """First N requests from the same IP should not be rate-limited."""
-        from api.main import _check_rate_limit
         from unittest.mock import MagicMock
+
+        from api.main import _check_rate_limit
 
         mock_request = MagicMock()
         mock_request.client.host = "10.0.0.1"
@@ -76,6 +77,7 @@ class TestRateLimiting:
     def test_request_over_limit_raises_429(self):
         """The (_RATE_LIMIT + 1)th request from the same IP raises HTTP 429."""
         from fastapi import HTTPException
+
         from api.main import _check_rate_limit
 
         mock_request = MagicMock()
@@ -93,6 +95,7 @@ class TestRateLimiting:
     def test_different_ips_tracked_separately(self):
         """Each IP has its own independent counter."""
         from fastapi import HTTPException
+
         from api.main import _check_rate_limit
 
         req_a = MagicMock()
@@ -114,8 +117,9 @@ class TestRateLimiting:
 
     def test_x_forwarded_for_used_when_present(self):
         """Rate limiter uses X-Forwarded-For header over request.client.host."""
-        from api.main import _real_client_ip
         from unittest.mock import MagicMock
+
+        from api.main import _real_client_ip
 
         mock_request = MagicMock()
         mock_request.client.host = "127.0.0.1"
@@ -126,8 +130,9 @@ class TestRateLimiting:
 
     def test_fallback_to_client_host_when_no_forwarded_header(self):
         """Falls back to request.client.host when X-Forwarded-For is absent."""
-        from api.main import _real_client_ip
         from unittest.mock import MagicMock
+
+        from api.main import _real_client_ip
 
         mock_request = MagicMock()
         mock_request.client.host = "192.168.1.5"
@@ -138,7 +143,7 @@ class TestRateLimiting:
 
     def test_ip_table_bounded_by_max_tracked_ips(self):
         """Rate counter table never grows beyond _MAX_TRACKED_IPS entries."""
-        from api.main import _check_rate_limit, _MAX_TRACKED_IPS
+        from api.main import _MAX_TRACKED_IPS, _check_rate_limit
 
         for i in range(_MAX_TRACKED_IPS + 50):
             req = MagicMock()

@@ -10,7 +10,6 @@ implementation; nothing in the live agent calls this module.
 
 import logging
 import os
-from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -18,6 +17,8 @@ logger = logging.getLogger(__name__)
 try:
     from llama_index.core import (
         Settings as LlamaSettings,
+    )
+    from llama_index.core import (
         SimpleDirectoryReader,
         VectorStoreIndex,
     )

@@ -68,8 +68,8 @@ def _build_client():
     except ImportError:
         logger.error("tavily-python is not installed. Run: pip install tavily-python")
         return None
-    except Exception as exc:
-        logger.exception("Unexpected error constructing TavilyClient: %s", exc)
+    except Exception:
+        logger.exception("Unexpected error constructing TavilyClient")
         return None
 
 
@@ -151,7 +151,7 @@ def web_search(
 
     except Exception as exc:
         # Catch-all: network errors, rate limits, auth failures, etc.
-        logger.exception("Tavily search failed for query '%.80s': %s", query, exc)
+        logger.exception("Tavily search failed for query '%.80s'", query)
         return [_fallback_result(query, reason=f"Search error: {type(exc).__name__}")]
 
 

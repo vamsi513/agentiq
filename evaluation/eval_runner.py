@@ -21,7 +21,7 @@ import asyncio
 import json
 import logging
 import time
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -56,7 +56,7 @@ async def _run_single_query(
         result = await run_agent_sync(query, session_id)
         return result
     except Exception as exc:
-        logger.exception("Query failed: %.60s — %s", query, exc)
+        logger.exception("Query failed: %.60s", query)
         return {
             "answer": f"ERROR: {type(exc).__name__}",
             "sources": [],
@@ -126,8 +126,8 @@ def _run_ragas(
     except ImportError as exc:
         logger.error("RAGAS import failed: %s", exc)
         raise
-    except Exception as exc:
-        logger.exception("RAGAS evaluation failed: %s", exc)
+    except Exception:
+        logger.exception("RAGAS evaluation failed")
         raise
 
 
@@ -239,7 +239,7 @@ def run_evaluation(max_queries: int = 50) -> dict[str, Any]:
 
     results = {
         "metadata": {
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
             "num_queries": len(per_query_results),
             "model": "gpt-4o-mini",
             "embedding_model": "all-MiniLM-L6-v2",

@@ -41,7 +41,7 @@ def _get_client() -> Any:
     if _pc_client is None:
         api_key = os.getenv("PINECONE_API_KEY", "")
         if not api_key:
-            raise EnvironmentError("PINECONE_API_KEY is not set")
+            raise OSError("PINECONE_API_KEY is not set")
         _pc_client = Pinecone(api_key=api_key)
     return _pc_client
 

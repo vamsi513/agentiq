@@ -20,14 +20,12 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run evaluation on EC2
-        id: eval
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
           command_timeout: 30m
-          capture_stdout: true
           script: |
             set -e
             cd /home/ec2-user/agentiq
@@ -50,31 +48,24 @@ jobs:
               agentiq-eval:latest \
               bash -c "pip install -q 'ragas>=0.2.0,<0.3.0' datasets && python -m evaluation.eval_runner"
 
-            echo "===EVAL_RESULTS_JSON_START==="
-            cat evaluation/evaluation_results.json
-            echo "===EVAL_RESULTS_JSON_END==="
+            sudo chmod 644 evaluation/evaluation_results.json
 
-      - name: Extract and commit results
+      - name: Fetch results file from EC2
         env:
-          EVAL_STDOUT: ${{ steps.eval.outputs.stdout }}
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
         run: |
-          python3 - <<'PYEOF'
-          import os
-          import re
-          import sys
+          mkdir -p ~/.ssh
+          echo "$EC2_SSH_KEY" > ~/.ssh/eval_key
+          chmod 600 ~/.ssh/eval_key
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/eval_key ec2-user@"$EC2_HOST" \
+            'cat /home/ec2-user/agentiq/evaluation/evaluation_results.json' \
+            > evaluation/evaluation_results.json
+          rm -f ~/.ssh/eval_key
+          python3 -c "import json; json.load(open('evaluation/evaluation_results.json'))"
 
-          text = os.environ["EVAL_STDOUT"]
-          m = re.search(
-              r"===EVAL_RESULTS_JSON_START===\n(.*?)\n===EVAL_RESULTS_JSON_END===",
-              text, re.DOTALL,
-          )
-          if not m:
-              print("Could not find results JSON markers in eval output.", file=sys.stderr)
-              sys.exit(1)
-          with open("evaluation/evaluation_results.json", "w") as f:
-              f.write(m.group(1).strip() + "\n")
-          PYEOF
-
+      - name: Commit results
+        run: |
           if git diff --quiet evaluation/evaluation_results.json; then
             echo "No change in eval results — skipping commit."
             exit 0

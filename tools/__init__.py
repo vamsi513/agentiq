@@ -7,4 +7,4 @@ Currently exposes:
 
 from tools.web_search import WebSearchResult, web_search
 
-__all__ = ["web_search", "WebSearchResult"]
+__all__ = ["WebSearchResult", "web_search"]

@@ -12,7 +12,6 @@ the vectorstore code.
 """
 
 import logging
-from typing import List  # noqa: UP006 — kept for sentence-transformers 2.7 compatibility
 
 from sentence_transformers import SentenceTransformer
 
@@ -46,11 +45,11 @@ class SentenceTransformerEmbeddings:
         try:
             self._model = SentenceTransformer(self.model_name)
             logger.info("Embedding model loaded successfully.")
-        except Exception as exc:
-            logger.exception("Failed to load embedding model %s: %s", self.model_name, exc)
+        except Exception:
+            logger.exception("Failed to load embedding model %s", self.model_name)
             raise
 
-    def embed_documents(self, texts: List[str]) -> List[List[float]]:
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
         """
         Encode a list of document chunks into dense vectors.
 
@@ -71,11 +70,11 @@ class SentenceTransformerEmbeddings:
                 convert_to_numpy=True,
             )
             return embeddings.tolist()
-        except Exception as exc:
-            logger.exception("Error embedding documents: %s", exc)
+        except Exception:
+            logger.exception("Error embedding documents")
             raise
 
-    def embed_query(self, text: str) -> List[float]:
+    def embed_query(self, text: str) -> list[float]:
         """
         Encode a single query string into a dense vector.
 
@@ -93,8 +92,8 @@ class SentenceTransformerEmbeddings:
                 convert_to_numpy=True,
             )
             return embedding[0].tolist()
-        except Exception as exc:
-            logger.exception("Error embedding query: %s", exc)
+        except Exception:
+            logger.exception("Error embedding query")
             raise
 
 

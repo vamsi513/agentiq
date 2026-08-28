@@ -311,8 +311,8 @@ def add_documents_to_vectorstore(
         )
         return len(texts)
 
-    except Exception as exc:
-        logger.exception("add_documents_to_vectorstore failed: %s", exc)
+    except Exception:
+        logger.exception("add_documents_to_vectorstore failed")
         return 0
 
 
@@ -386,6 +386,6 @@ def query_vectorstore(
         logger.debug("Retrieved %d chunks for query: %.60s", len(results), query)
         return results
 
-    except Exception as exc:
-        logger.exception("query_vectorstore failed for query '%.60s': %s", query, exc)
+    except Exception:
+        logger.exception("query_vectorstore failed for query '%.60s'", query)
         return []

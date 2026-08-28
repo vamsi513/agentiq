@@ -18,8 +18,9 @@ helpers to programmatically enable/disable tracing and create traced runs.
 
 import logging
 import os
+from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Any, Generator
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +35,12 @@ except ImportError:
     def traceable(*args, **kwargs):  # type: ignore[misc]
         def decorator(fn):
             return fn
-        return decorator if args and callable(args[0]) else decorator
+        # Support both @traceable and @traceable(name=...) calling
+        # conventions: called directly on a function vs. called with
+        # config kwargs to produce a decorator.
+        if args and callable(args[0]):
+            return decorator(args[0])
+        return decorator
 
 
 _client: Any = None

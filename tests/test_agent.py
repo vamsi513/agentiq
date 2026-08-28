@@ -12,11 +12,10 @@ Tests cover:
 All LLM calls and external tool calls are mocked — no real API calls made.
 """
 
-import pytest
 from unittest.mock import MagicMock, patch
 
+import pytest
 from langchain_core.messages import AIMessage, HumanMessage
-
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -372,8 +371,9 @@ class TestBuildGraph:
 
     def test_graph_compiles_with_memory_saver(self):
         """build_graph() accepts a MemorySaver checkpointer."""
-        from agent.graph import build_graph
         from langgraph.checkpoint.memory import MemorySaver
+
+        from agent.graph import build_graph
 
         with patch.multiple(
             "agent.nodes",

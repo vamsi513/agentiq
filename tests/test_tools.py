@@ -11,12 +11,9 @@ All Tavily API calls are mocked — no real network requests are made.
 """
 
 import sys
-
-import pytest
 from unittest.mock import MagicMock, patch
 
 import tools.web_search  # noqa: F401 — ensures tools.web_search is registered in sys.modules
-
 
 # ── WebSearchResult dataclass ─────────────────────────────────────────────────
 

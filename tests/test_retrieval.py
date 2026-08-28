@@ -12,14 +12,12 @@ The embedding model is mocked with fixed-dimension random vectors so tests
 run without downloading the sentence-transformers model.
 """
 
-import pickle
 import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
-
 
 # ── Document parsing ──────────────────────────────────────────────────────────
 
@@ -167,8 +165,8 @@ class TestFAISSRoundTrip:
         Building an index from chunks and querying it returns <= top_k results
         with the expected keys.
         """
-        from retrieval.vectorstore import _build_index, query_vectorstore
         import retrieval.vectorstore as vs_module
+        from retrieval.vectorstore import _build_index, query_vectorstore
 
         chunks = [
             {"title": f"Doc {i}", "source": f"src_{i}", "content": f"Content number {i}"}
@@ -201,7 +199,8 @@ class TestFAISSRoundTrip:
     def test_save_and_load_index(self):
         """Saving then loading an index preserves the vector count."""
         import faiss
-        from retrieval.vectorstore import _save_index, _load_index
+
+        from retrieval.vectorstore import _load_index, _save_index
 
         dim = 64
         index = faiss.IndexFlatIP(dim)

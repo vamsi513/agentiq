@@ -49,14 +49,14 @@ def _load_secrets() -> None:
                 os.environ[key] = st.secrets[key]
     except Exception:
         # st.secrets raises when running locally without secrets.toml — safe to ignore
-        pass
+        logger.debug("st.secrets unavailable (expected when running locally).")
 
 
 _load_secrets()
 
 # Import after secrets are loaded so config.py sees the keys
-from config import settings  # noqa: E402
-from observability.langsmith_tracer import configure_tracing  # noqa: E402
+from config import settings
+from observability.langsmith_tracer import configure_tracing
 
 configure_tracing()
 
@@ -117,8 +117,8 @@ def _ensure_index() -> None:
             get_vectorstore()
             st.session_state.index_ready = True
             logger.info("FAISS index ready.")
-        except Exception as exc:
-            logger.exception("FAISS index build failed: %s", exc)
+        except Exception:
+            logger.exception("FAISS index build failed")
             st.error(
                 "Document index could not be loaded. "
                 "Retrieval will be unavailable — web search and direct answers still work."
@@ -151,64 +151,65 @@ def _handle_pdf_upload(uploaded_file) -> None:
         st.sidebar.success(f"Already indexed: **{uploaded_file.name}**")
         return
 
-    with st.sidebar:
-        with st.spinner(f"Indexing **{uploaded_file.name}**…"):
-            try:
-                import io
-                from pypdf import PdfReader
-                from retrieval.vectorstore import add_documents_to_vectorstore
+    with st.sidebar, st.spinner(f"Indexing **{uploaded_file.name}**…"):
+        try:
+            import io
 
-                # Extract text page by page
-                reader = PdfReader(io.BytesIO(uploaded_file.read()))
-                pages_text = []
-                for page in reader.pages:
-                    text = page.extract_text() or ""
-                    if text.strip():
-                        pages_text.append(text.strip())
+            from pypdf import PdfReader
 
-                if not pages_text:
-                    st.error("Could not extract text from this PDF.")
-                    return
+            from retrieval.vectorstore import add_documents_to_vectorstore
 
-                full_text = "\n\n".join(pages_text)
+            # Extract text page by page
+            reader = PdfReader(io.BytesIO(uploaded_file.read()))
+            pages_text = []
+            for page in reader.pages:
+                text = page.extract_text() or ""
+                if text.strip():
+                    pages_text.append(text.strip())
 
-                # Chunk the extracted text (512-token ≈ 2048 chars, 64-token overlap ≈ 256 chars)
-                chunk_size = 2048
-                overlap = 256
-                chunks_text: list[str] = []
-                start = 0
-                while start < len(full_text):
-                    chunk = full_text[start: start + chunk_size]
-                    chunks_text.append(chunk)
-                    start += chunk_size - overlap
+            if not pages_text:
+                st.error("Could not extract text from this PDF.")
+                return
 
-                from pathlib import Path as _Path
-                title = _Path(uploaded_file.name).stem
-                metadata = [
-                    {"title": title, "source": f"Uploaded PDF: {uploaded_file.name}"}
-                    for _ in chunks_text
-                ]
+            full_text = "\n\n".join(pages_text)
 
-                n_added = add_documents_to_vectorstore(
-                    chunks_text, metadata, session_id=st.session_state.session_id
-                )
-                st.session_state.indexed_pdfs.add(file_key)
-                st.success(
-                    f"**{uploaded_file.name}** indexed — "
-                    f"{len(reader.pages)} pages, {n_added} chunks added to retrieval."
-                )
-                logger.info(
-                    "PDF indexed: '%s' — %d pages, %d chunks.",
-                    uploaded_file.name,
-                    len(reader.pages),
-                    n_added,
-                )
+            # Chunk the extracted text (512-token ≈ 2048 chars, 64-token overlap ≈ 256 chars)
+            chunk_size = 2048
+            overlap = 256
+            chunks_text: list[str] = []
+            start = 0
+            while start < len(full_text):
+                chunk = full_text[start: start + chunk_size]
+                chunks_text.append(chunk)
+                start += chunk_size - overlap
 
-            except ImportError:
-                st.error("pypdf is not installed. Run: pip install pypdf")
-            except Exception as exc:
-                logger.exception("PDF indexing failed: %s", exc)
-                st.error(f"Failed to index PDF: {type(exc).__name__}")
+            from pathlib import Path as _Path
+            title = _Path(uploaded_file.name).stem
+            metadata = [
+                {"title": title, "source": f"Uploaded PDF: {uploaded_file.name}"}
+                for _ in chunks_text
+            ]
+
+            n_added = add_documents_to_vectorstore(
+                chunks_text, metadata, session_id=st.session_state.session_id
+            )
+            st.session_state.indexed_pdfs.add(file_key)
+            st.success(
+                f"**{uploaded_file.name}** indexed — "
+                f"{len(reader.pages)} pages, {n_added} chunks added to retrieval."
+            )
+            logger.info(
+                "PDF indexed: '%s' — %d pages, %d chunks.",
+                uploaded_file.name,
+                len(reader.pages),
+                n_added,
+            )
+
+        except ImportError:
+            st.error("pypdf is not installed. Run: pip install pypdf")
+        except Exception as exc:
+            logger.exception("PDF indexing failed")
+            st.error(f"Failed to index PDF: {type(exc).__name__}")
 
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
@@ -231,7 +232,7 @@ def _render_sidebar() -> None:
 
         st.subheader("Model Config")
         st.markdown(f"**LLM:** `{settings.openai_model}`")
-        st.markdown(f"**Embeddings:** `all-MiniLM-L6-v2`")
+        st.markdown("**Embeddings:** `all-MiniLM-L6-v2`")
         st.markdown(f"**Top-K Retrieval:** `{settings.top_k_retrieval}`")
         st.divider()
 
@@ -416,9 +417,10 @@ def _stream_agent_response(
     Returns:
         Tuple of (full_answer_text, sources_list, route_str, elapsed_ms).
     """
+    from langchain_core.messages import HumanMessage
+
     from agent.graph import get_graph
     from agent.memory import get_thread_config
-    from langchain_core.messages import HumanMessage
 
     token_queue: queue.Queue = queue.Queue()
 
@@ -472,7 +474,7 @@ def _stream_agent_response(
                             token_queue.put(("sources", output["sources"]))
 
         except Exception as exc:
-            logger.exception("Streaming producer error: %s", exc)
+            logger.exception("Streaming producer error")
             token_queue.put(("error", str(exc)))
         finally:
             token_queue.put(("done", None))
@@ -587,7 +589,7 @@ def main() -> None:
                     text_placeholder,
                 )
             except Exception as exc:
-                logger.exception("Unexpected error during streaming: %s", exc)
+                logger.exception("Unexpected error during streaming")
                 answer = f"Unexpected error: {type(exc).__name__}. Please try again."
                 sources = []
                 route = "direct"
