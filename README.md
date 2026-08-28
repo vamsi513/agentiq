@@ -68,7 +68,7 @@
 - **PDF upload** — users can upload their own PDFs; text is extracted, chunked, and indexed into FAISS at runtime
 - **LoRA fine-tuning notebook** — `notebooks/finetune_lora.ipynb` demonstrates full PEFT/LoRA fine-tuning on a custom Q&A dataset
 - **Kubernetes manifests** — `k8s/` directory contains Deployment, Service/Ingress, and HPA manifests as a deployment reference
-- **API rate limiting** — 30 requests/minute per IP enforced at the FastAPI layer; trusted-proxy-aware `X-Forwarded-For` handling for deployments behind nginx
+- **API rate limiting** — 30 requests/minute per IP enforced at the FastAPI layer; trusted-proxy-aware `X-Forwarded-For` handling for deployments behind nginx. In-process only — correct for the current single-instance deployment, but would need a shared store (Redis, etc.) to mean anything across multiple replicas
 
 ---
 

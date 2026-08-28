@@ -28,6 +28,11 @@ from config import settings
 logger = structlog.get_logger(__name__)
 
 # ── Rate limiting (token-bucket per IP, 30 req/min) ──────────────────────────
+# In-process only — correct for the current single-instance EC2 deployment,
+# but resets on restart and wouldn't be shared across replicas if this were
+# ever actually run behind the k8s HPA manifests in k8s/ (those are a
+# deployment reference, not what's live). A multi-replica deployment would
+# need a shared store (Redis, etc.) for this to mean anything.
 _RATE_LIMIT = 30
 _RATE_WINDOW = 60.0
 _MAX_TRACKED_IPS = 2000
@@ -91,6 +96,21 @@ async def lifespan(app: FastAPI):
     deprecated @app.on_event("startup") decorator.
     """
     logger.info("AgentIQ API starting up…")
+
+    if not settings.api_key:
+        logger.warning(
+            "SECURITY: AGENTIQ_API_KEY is not set — all /chat endpoints are "
+            "unauthenticated. Anyone who can reach this server can consume "
+            "paid OpenAI and Tavily quota. Set AGENTIQ_API_KEY unless this "
+            "is intentionally a public demo."
+        )
+    if settings.allowed_origins == ["*"]:
+        logger.warning(
+            "SECURITY: ALLOWED_ORIGINS is not set — CORS allows requests from "
+            "any origin. Set ALLOWED_ORIGINS to a specific domain list for a "
+            "production deployment."
+        )
+
     try:
         from agent.graph import get_graph
         get_graph()

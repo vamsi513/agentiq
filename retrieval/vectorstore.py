@@ -19,6 +19,7 @@ with their metadata and similarity scores.
 import logging
 import pickle
 import threading
+import time
 from pathlib import Path
 from typing import Any
 
@@ -208,8 +209,29 @@ _index_lock = threading.Lock()   # protects both _faiss_index and _faiss_chunks
 # doing so would let any other visitor's queries retrieve content from a
 # stranger's uploaded PDF. Each session gets its own small FAISS index instead,
 # queried alongside the shared base index and merged by score at query time.
+#
+# This process runs indefinitely, so without expiry _session_indices would
+# grow forever — one entry per visitor who's ever uploaded a PDF, never freed.
+# Each entry tracks its own last-touched time; pruned lazily (no background
+# thread) whenever a new upload comes in.
+_SESSION_TTL_SECONDS = 2 * 60 * 60  # 2 hours
 _session_indices: dict[str, tuple[faiss.Index, list[dict[str, Any]]]] = {}
-_session_lock = threading.Lock()   # protects _session_indices
+_session_last_touched: dict[str, float] = {}
+_session_lock = threading.Lock()   # protects _session_indices and _session_last_touched
+
+
+def _prune_expired_sessions() -> None:
+    """Drop session indices untouched for longer than _SESSION_TTL_SECONDS. Caller holds _session_lock."""
+    now = time.monotonic()
+    expired = [
+        sid for sid, last in _session_last_touched.items()
+        if now - last > _SESSION_TTL_SECONDS
+    ]
+    for sid in expired:
+        _session_indices.pop(sid, None)
+        _session_last_touched.pop(sid, None)
+    if expired:
+        logger.info("Expired %d inactive session upload indices.", len(expired))
 
 
 def get_vectorstore() -> tuple[faiss.Index, list[dict[str, Any]]]:
@@ -294,6 +316,8 @@ def add_documents_to_vectorstore(
         ]
 
         with _session_lock:
+            _prune_expired_sessions()
+
             existing = _session_indices.get(session_id)
             if existing is None:
                 session_index = faiss.IndexFlatIP(vectors.shape[1])
@@ -304,6 +328,7 @@ def add_documents_to_vectorstore(
             session_index.add(vectors)
             session_chunks.extend(new_chunks)
             _session_indices[session_id] = (session_index, session_chunks)
+            _session_last_touched[session_id] = time.monotonic()
 
         logger.info(
             "Added %d chunks to session %s's private FAISS index.",
@@ -376,6 +401,8 @@ def query_vectorstore(
         if session_id is not None:
             with _session_lock:
                 session_state = _session_indices.get(session_id)
+                if session_state is not None:
+                    _session_last_touched[session_id] = time.monotonic()
             if session_state is not None:
                 session_index, session_chunks = session_state
                 results.extend(_search_one(session_index, session_chunks, query_vec, k))

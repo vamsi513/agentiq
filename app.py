@@ -127,6 +127,15 @@ def _ensure_index() -> None:
 
 
 # ── PDF Upload Handler ────────────────────────────────────────────────────────
+# Extraction, chunking, and embedding all run synchronously in this shared
+# process (Streamlit Cloud serves every concurrent visitor from one process),
+# so these caps bound how much CPU/memory one upload can consume regardless
+# of what the raw file size limit (.streamlit/config.toml) allows.
+_MAX_PDF_PAGES = 50
+_MAX_PDF_CHUNKS = 100
+_PDF_MAGIC_BYTES = b"%PDF-"
+
+
 def _handle_pdf_upload(uploaded_file) -> None:
     """
     Extract text from an uploaded PDF, chunk it, and index it for this session.
@@ -156,11 +165,33 @@ def _handle_pdf_upload(uploaded_file) -> None:
             import io
 
             from pypdf import PdfReader
+            from pypdf.errors import PdfReadError
 
             from retrieval.vectorstore import add_documents_to_vectorstore
 
+            raw = uploaded_file.read()
+            if not raw.startswith(_PDF_MAGIC_BYTES):
+                st.error("This file doesn't look like a valid PDF.")
+                return
+
+            try:
+                reader = PdfReader(io.BytesIO(raw))
+            except PdfReadError:
+                st.error("Could not read this PDF — it may be corrupted or malformed.")
+                return
+
+            if reader.is_encrypted:
+                st.error("Encrypted/password-protected PDFs aren't supported.")
+                return
+
+            if len(reader.pages) > _MAX_PDF_PAGES:
+                st.error(
+                    f"This PDF has {len(reader.pages)} pages — the demo limit is "
+                    f"{_MAX_PDF_PAGES}. Try a shorter document."
+                )
+                return
+
             # Extract text page by page
-            reader = PdfReader(io.BytesIO(uploaded_file.read()))
             pages_text = []
             for page in reader.pages:
                 text = page.extract_text() or ""
@@ -182,6 +213,8 @@ def _handle_pdf_upload(uploaded_file) -> None:
                 chunk = full_text[start: start + chunk_size]
                 chunks_text.append(chunk)
                 start += chunk_size - overlap
+                if len(chunks_text) >= _MAX_PDF_CHUNKS:
+                    break
 
             from pathlib import Path as _Path
             title = _Path(uploaded_file.name).stem
@@ -198,6 +231,11 @@ def _handle_pdf_upload(uploaded_file) -> None:
                 f"**{uploaded_file.name}** indexed — "
                 f"{len(reader.pages)} pages, {n_added} chunks added to retrieval."
             )
+            if len(chunks_text) >= _MAX_PDF_CHUNKS:
+                st.warning(
+                    f"Only the first {_MAX_PDF_CHUNKS} chunks were indexed "
+                    "(demo limit) — later sections of this document won't be searchable."
+                )
             logger.info(
                 "PDF indexed: '%s' — %d pages, %d chunks.",
                 uploaded_file.name,

@@ -6,4 +6,8 @@ textColor = "#F1F5F9"
 font = "sans serif"
 
 [server]
-maxUploadSize = 50
+# Extraction/chunking/embedding all run synchronously in the shared Streamlit
+# process — kept small so one upload can't noticeably slow down other
+# concurrent visitors. See _MAX_PDF_PAGES / _MAX_PDF_CHUNKS in app.py for the
+# matching content-size caps enforced after upload.
+maxUploadSize = 15
