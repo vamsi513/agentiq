@@ -159,6 +159,7 @@ def retriever_node(state: AgentState) -> dict[str, Any]:
         Partial state dict updating ``context`` and ``sources``.
     """
     query = state.get("query", "")
+    session_id = state.get("session_id")
     if not query:
         logger.warning("Retriever called with empty query.")
         return {"context": "", "sources": []}
@@ -174,7 +175,7 @@ def retriever_node(state: AgentState) -> dict[str, Any]:
         seen: set[str] = set()
         merged: list[dict] = []
         for q in variants:
-            for r in query_vectorstore(q, top_k=5):
+            for r in query_vectorstore(q, top_k=5, session_id=session_id):
                 key = r["content"][:120]
                 if key not in seen:
                     seen.add(key)

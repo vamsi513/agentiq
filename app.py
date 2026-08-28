@@ -129,12 +129,13 @@ def _ensure_index() -> None:
 # ── PDF Upload Handler ────────────────────────────────────────────────────────
 def _handle_pdf_upload(uploaded_file) -> None:
     """
-    Extract text from an uploaded PDF, chunk it, and add it to the FAISS index.
+    Extract text from an uploaded PDF, chunk it, and index it for this session.
 
     Uses pypdf to extract text page by page.  The extracted text is split into
     overlapping chunks matching the vectorstore's chunking strategy, then
-    embedded and added to the in-memory FAISS index so the retrieval route can
-    return content from the uploaded document.
+    embedded and added to a FAISS index scoped to this browser session, so
+    only this session's own queries can retrieve it — other concurrent
+    visitors never see another session's uploaded content.
 
     Tracks which files have already been indexed in session_state to avoid
     re-indexing on Streamlit reruns.
@@ -188,7 +189,9 @@ def _handle_pdf_upload(uploaded_file) -> None:
                     for _ in chunks_text
                 ]
 
-                n_added = add_documents_to_vectorstore(chunks_text, metadata)
+                n_added = add_documents_to_vectorstore(
+                    chunks_text, metadata, session_id=st.session_state.session_id
+                )
                 st.session_state.indexed_pdfs.add(file_key)
                 st.success(
                     f"**{uploaded_file.name}** indexed — "

@@ -202,6 +202,15 @@ _faiss_index: faiss.Index | None = None
 _faiss_chunks: list[dict[str, Any]] | None = None
 _index_lock = threading.Lock()   # protects both _faiss_index and _faiss_chunks
 
+# ── Per-session upload state ──────────────────────────────────────────────────
+# Streamlit Cloud runs one process shared by every concurrent visitor, so
+# documents uploaded via the sidebar must NOT go into the shared index above —
+# doing so would let any other visitor's queries retrieve content from a
+# stranger's uploaded PDF. Each session gets its own small FAISS index instead,
+# queried alongside the shared base index and merged by score at query time.
+_session_indices: dict[str, tuple[faiss.Index, list[dict[str, Any]]]] = {}
+_session_lock = threading.Lock()   # protects _session_indices
+
 
 def get_vectorstore() -> tuple[faiss.Index, list[dict[str, Any]]]:
     """
@@ -235,18 +244,24 @@ def get_vectorstore() -> tuple[faiss.Index, list[dict[str, Any]]]:
     return _faiss_index, _faiss_chunks
 
 
-def add_documents_to_vectorstore(texts: list[str], metadata: list[dict[str, Any]]) -> int:
+def add_documents_to_vectorstore(
+    texts: list[str], metadata: list[dict[str, Any]], session_id: str
+) -> int:
     """
-    Add new document chunks to the in-memory FAISS index at runtime.
+    Add uploaded document chunks to this session's private FAISS index.
 
-    Used by the PDF upload feature to index uploaded documents without
-    rebuilding the entire index from scratch.  Changes are not persisted
-    to disk — they exist only for the lifetime of the current process.
+    Used by the PDF upload feature. Uploaded content is embedded into a
+    small index scoped to ``session_id`` — never the shared base index —
+    so other concurrent visitors' queries cannot retrieve it. Changes are
+    not persisted to disk — they exist only for the lifetime of the
+    current process and session.
 
     Args:
-        texts:    List of text strings to embed and add.
-        metadata: List of metadata dicts (same length as texts) with keys
-                  ``title``, ``source``.  Other keys are optional.
+        texts:      List of text strings to embed and add.
+        metadata:   List of metadata dicts (same length as texts) with keys
+                    ``title``, ``source``.  Other keys are optional.
+        session_id: The uploading user's session/thread id. Required so the
+                    upload is isolated to that session's own queries.
 
     Returns:
         Number of vectors successfully added.
@@ -260,11 +275,6 @@ def add_documents_to_vectorstore(texts: list[str], metadata: list[dict[str, Any]
     if not texts:
         return 0
 
-    global _faiss_index, _faiss_chunks
-
-    # Ensure the index is loaded/built before adding
-    get_vectorstore()
-
     try:
         embeddings_model = get_embeddings()
         vectors = np.array(
@@ -272,20 +282,33 @@ def add_documents_to_vectorstore(texts: list[str], metadata: list[dict[str, Any]
         )
         faiss.normalize_L2(vectors)
 
-        with _index_lock:
-            _faiss_index.add(vectors)  # type: ignore[union-attr]
-            for i, (text, meta) in enumerate(zip(texts, metadata)):
-                _faiss_chunks.append(  # type: ignore[union-attr]
-                    {
-                        "title": meta.get("title", "Uploaded Document"),
-                        "source": meta.get("source", ""),
-                        "content": text,
-                        "chunk_index": i,
-                        "doc_index": -1,  # -1 signals runtime-added document
-                    }
-                )
+        new_chunks = [
+            {
+                "title": meta.get("title", "Uploaded Document"),
+                "source": meta.get("source", ""),
+                "content": text,
+                "chunk_index": i,
+                "doc_index": -1,  # -1 signals runtime-added document
+            }
+            for i, (text, meta) in enumerate(zip(texts, metadata))
+        ]
 
-        logger.info("Added %d chunks to in-memory FAISS index.", len(texts))
+        with _session_lock:
+            existing = _session_indices.get(session_id)
+            if existing is None:
+                session_index = faiss.IndexFlatIP(vectors.shape[1])
+                session_chunks: list[dict[str, Any]] = []
+            else:
+                session_index, session_chunks = existing
+
+            session_index.add(vectors)
+            session_chunks.extend(new_chunks)
+            _session_indices[session_id] = (session_index, session_chunks)
+
+        logger.info(
+            "Added %d chunks to session %s's private FAISS index.",
+            len(texts), session_id,
+        )
         return len(texts)
 
     except Exception as exc:
@@ -293,17 +316,44 @@ def add_documents_to_vectorstore(texts: list[str], metadata: list[dict[str, Any]
         return 0
 
 
+def _search_one(
+    index: faiss.Index, chunks: list[dict[str, Any]], query_vec: np.ndarray, k: int
+) -> list[dict[str, Any]]:
+    scores, indices = index.search(query_vec, min(k, index.ntotal))
+    results: list[dict[str, Any]] = []
+    for score, idx in zip(scores[0], indices[0]):
+        if idx < 0:
+            continue
+        chunk = chunks[idx]
+        results.append(
+            {
+                "title": chunk["title"],
+                "source": chunk["source"],
+                "content": chunk["content"],
+                "score": float(score),
+            }
+        )
+    return results
+
+
 def query_vectorstore(
     query: str,
     top_k: int | None = None,
+    session_id: str | None = None,
 ) -> list[dict[str, Any]]:
     """
     Retrieve the top-K most relevant chunks for a given query.
 
+    Searches the shared base corpus and, if ``session_id`` has any
+    uploaded documents, that session's private index too — results
+    are merged by score. A session never sees another session's uploads.
+
     Args:
-        query: Natural language query string.
-        top_k: Number of results to return.  Defaults to
-               ``settings.top_k_retrieval``.
+        query:      Natural language query string.
+        top_k:      Number of results to return.  Defaults to
+                    ``settings.top_k_retrieval``.
+        session_id: Current session/thread id, used to include that
+                    session's own uploaded-document chunks, if any.
 
     Returns:
         List of result dicts, each with keys:
@@ -321,21 +371,17 @@ def query_vectorstore(
         )
         faiss.normalize_L2(query_vec)
 
-        scores, indices = index.search(query_vec, k)
+        results = _search_one(index, chunks, query_vec, k)
 
-        results: list[dict[str, Any]] = []
-        for score, idx in zip(scores[0], indices[0]):
-            if idx < 0:
-                continue
-            chunk = chunks[idx]
-            results.append(
-                {
-                    "title": chunk["title"],
-                    "source": chunk["source"],
-                    "content": chunk["content"],
-                    "score": float(score),
-                }
-            )
+        if session_id is not None:
+            with _session_lock:
+                session_state = _session_indices.get(session_id)
+            if session_state is not None:
+                session_index, session_chunks = session_state
+                results.extend(_search_one(session_index, session_chunks, query_vec, k))
+
+        results.sort(key=lambda r: r["score"], reverse=True)
+        results = results[:k]
 
         logger.debug("Retrieved %d chunks for query: %.60s", len(results), query)
         return results
