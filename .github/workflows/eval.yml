@@ -34,14 +34,21 @@ jobs:
 
             # Pull latest eval code
             git fetch origin master
-            git checkout origin/master -- evaluation/ agent/ api/ requirements.txt
+            git checkout origin/master -- evaluation/ agent/ api/ retrieval/ tools/ config.py requirements.txt Dockerfile
 
-            # Install eval deps
-            pip install -q -r requirements.txt "ragas>=0.2.0,<0.3.0" datasets 2>&1 | tail -3
+            # Build the same image production deploys from, so eval runs
+            # against the exact dependency versions the live app uses.
+            sudo docker build -t agentiq-eval:latest .
 
-            # Run evaluation using API keys from .env on the server
-            set -a; source .env; set +a
-            python -m evaluation.eval_runner
+            # Bind-mount the eval code and data dirs so results land back on
+            # the host filesystem; run as root so `pip install` at runtime
+            # can write into the image's site-packages.
+            sudo docker run --rm --network host --env-file .env --user root \
+              -v "$(pwd)/evaluation:/app/evaluation" \
+              -v "$(pwd)/faiss_index:/app/faiss_index" \
+              -v "$(pwd)/retrieval/documents:/app/retrieval/documents" \
+              agentiq-eval:latest \
+              bash -c "pip install -q 'ragas>=0.2.0,<0.3.0' datasets && python -m evaluation.eval_runner"
 
             echo "===EVAL_RESULTS_JSON_START==="
             cat evaluation/evaluation_results.json
