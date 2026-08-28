@@ -1,19 +1,41 @@
 {
   "metadata": {
-    "timestamp": "2026-08-28T02:56:54.269668Z",
+    "timestamp": "2026-08-28T18:24:27.686651Z",
     "num_queries": 50,
     "model": "gpt-4o-mini",
     "embedding_model": "all-MiniLM-L6-v2",
     "ragas_version": "0.2.x"
   },
   "ragas_scores": {
-    "answer_relevancy": 0.7317,
-    "faithfulness": 0.6917
+    "answer_relevancy": 0.6875,
+    "faithfulness": 0.6743
+  },
+  "router_accuracy": {
+    "overall_accuracy": 1.0,
+    "correct": 50,
+    "total": 50,
+    "per_route_accuracy": {
+      "retrieval": 1.0,
+      "direct": 1.0,
+      "web_search": 1.0
+    },
+    "confusion_matrix": {
+      "retrieval": {
+        "retrieval": 25
+      },
+      "direct": {
+        "direct": 13
+      },
+      "web_search": {
+        "web_search": 12
+      }
+    },
+    "misrouted_queries": []
   },
   "aggregate_stats": {
-    "avg_latency_ms": 3513.3,
-    "min_latency_ms": 795.7,
-    "max_latency_ms": 27182.6,
+    "avg_latency_ms": 3090.9,
+    "min_latency_ms": 925.7,
+    "max_latency_ms": 24539.6,
     "route_distribution": {
       "retrieval": 25,
       "direct": 13,
@@ -26,275 +48,275 @@
       "id": 1,
       "question": "What is the Transformer architecture and why did it replace RNNs?",
       "ground_truth": "The Transformer architecture uses self-attention mechanisms instead of recurrence, allowing parallel processing of all tokens simultaneously. This leads to much better GPU utilization compared to RNNs and LSTMs which process tokens sequentially. It was introduced in 'Attention Is All You Need' by Vaswani et al. in 2017.",
-      "answer": "The **Transformer architecture**, introduced in \"Attention Is All You Need\" (Vaswani et al., 2017), revolutionized natural language processing by replacing recurrent networks (RNNs) entirely with **self-attention mechanisms**. Unlike RNNs and LSTMs that process tokens sequentially, Transformers process all tokens in **parallel**, which enables vastly better **GPU utilization**. \n\nThe core building block of the Transformer is the **multi-head self-attention layer**, which computes three projections — **Query, Key, and Value** — for each token and uses **scaled dot-product attention** to produce context-aware representations. This architecture allows for more efficient processing and better handling of long-range dependencies in data compared to RNNs, which are limited by their sequential nature. The original Transformer design consists of 6 encoder layers and 6 decoder layers, each with 512-dimensional embeddings and 8 attention heads, totaling 65 million parameters, and it has become the blueprint for virtually every major language model developed since 2017.",
+      "answer": "The **Transformer architecture**, introduced in \"Attention Is All You Need\" (Vaswani et al., 2017), revolutionized natural language processing by replacing **recurrent networks (RNNs)** entirely with **self-attention mechanisms**. Unlike RNNs and LSTMs that process tokens sequentially, Transformers process all tokens in **parallel**, which enables vastly better **GPU utilization**. \n\nThe core building block of the Transformer is the **multi-head self-attention layer**, which computes three projections — **Query, Key, and Value** — for each token and uses **scaled dot-product attention** to produce context-aware representations. This design allows for more efficient processing and has become the blueprint for virtually every major language model developed since 2017, highlighting its effectiveness compared to traditional RNN architectures.",
       "route_decision": "retrieval",
       "retrieval_score": 0.5498353838920593,
       "num_sources": 3,
-      "latency_ms": 27182.6,
+      "latency_ms": 24539.6,
       "context_type": "retrieval"
     },
     {
       "id": 2,
       "question": "How does multi-head self-attention work in Transformers?",
       "ground_truth": "Multi-head self-attention computes three projections — Query, Key, and Value — for each token and uses scaled dot-product attention to produce context-aware representations. Running multiple attention heads in parallel allows the model to attend to information from different representation subspaces simultaneously.",
-      "answer": "**Multi-head self-attention** in Transformers operates by computing three projections — **Query**, **Key**, and **Value** — for each token. The process involves the following steps:\n\n- Each token's representations are transformed into these three components through learned linear projections.\n- The **scaled dot-product attention** mechanism is then applied, which calculates attention scores by taking the dot product of the Query and Key matrices, scaling the result, and applying a softmax function to obtain attention weights.\n- These weights are used to compute a weighted sum of the Value matrices, resulting in context-aware representations for each token.\n\nThis mechanism allows the model to focus on different parts of the input sequence simultaneously, enhancing its ability to capture relationships and dependencies across tokens. The architecture typically employs multiple attention heads, enabling the model to learn various aspects of the input data in parallel, which significantly improves its performance in natural language processing tasks. According to [Source 1], this design became foundational for subsequent language models developed after 2017.",
+      "answer": "**Multi-head self-attention** in Transformers operates by computing three projections for each token: **Query**, **Key**, and **Value**. These projections are derived from the input embeddings and are used to produce context-aware representations through a mechanism known as **scaled dot-product attention**. This process allows the model to focus on different parts of the input sequence simultaneously, capturing various aspects of the data.\n\nThe attention mechanism works by calculating the attention scores between tokens, which determines how much focus each token should have on others in the sequence. This is done in parallel across multiple attention heads, enabling the model to learn diverse representations. Each head processes the input independently, and the results are then concatenated and linearly transformed to produce the final output. This architecture allows Transformers to utilize GPU resources more efficiently compared to traditional recurrent networks, which process tokens sequentially. \n\nAccording to [Source 1], the original Transformer architecture includes **6 encoder layers** and **6 decoder layers**, each with **512-dimensional embeddings** and **8 attention heads**, totaling **65 million parameters**.",
       "route_decision": "retrieval",
       "retrieval_score": 0.5312957167625427,
       "num_sources": 3,
-      "latency_ms": 3905.5,
+      "latency_ms": 3238.6,
       "context_type": "retrieval"
     },
     {
       "id": 3,
       "question": "What is BERT and how does bidirectional training differ from GPT?",
       "ground_truth": "BERT uses masked language modeling (MLM) where 15% of tokens are randomly masked and the model predicts them using context from both directions. GPT uses left-to-right training only. This bidirectionality makes BERT especially powerful for tasks requiring full sentence context like NER and reading comprehension.",
-      "answer": "**BERT** (Bidirectional Encoder Representations from Transformers) is a language model introduced by Devlin et al. in 2018. It employs **bidirectional pre-training**, which is a significant departure from GPT's **left-to-right training objective**. BERT utilizes a **masked language modeling (MLM)** approach, where 15% of input tokens are randomly masked, and the model learns to predict these tokens using context from both directions. Additionally, BERT includes a second pre-training task called **Next Sentence Prediction (NSP)**, which helps the model understand relationships between sentence pairs.\n\nIn contrast, GPT models, including GPT-4, follow a **left-to-right training objective**, meaning they predict the next token in a sequence based solely on the preceding tokens. This fundamental difference in training methodology highlights BERT's ability to leverage full sentence context, making it particularly effective for tasks such as named entity recognition and reading comprehension, while GPT's approach is more sequential and unidirectional.",
+      "answer": "**BERT** (Bidirectional Encoder Representations from Transformers) is a language model introduced by Devlin et al. in 2018. It employs **bidirectional pre-training**, which is a significant departure from GPT's **left-to-right training objective**. BERT utilizes a **masked language modeling (MLM)** approach, where 15% of input tokens are randomly masked, and the model learns to predict these tokens using context from both directions. Additionally, BERT includes a second pre-training task called **Next Sentence Prediction (NSP)**, which helps the model understand relationships between sentence pairs.\n\nIn contrast, GPT models, including GPT-4, follow a **left-to-right training objective**, meaning they predict the next token in a sequence based solely on the preceding tokens. This fundamental difference in training methodology highlights BERT's capability to leverage full sentence context, making it particularly effective for tasks like named entity recognition and reading comprehension, as opposed to the sequential prediction approach of GPT models.",
       "route_decision": "retrieval",
       "retrieval_score": 0.636711835861206,
       "num_sources": 3,
-      "latency_ms": 4102.4,
+      "latency_ms": 2525.1,
       "context_type": "retrieval"
     },
     {
       "id": 4,
       "question": "What are emergent capabilities in large language models?",
       "ground_truth": "Emergent capabilities are abilities that appear suddenly at certain model scale thresholds and were not present in smaller models. Examples include multi-step arithmetic reasoning, chain-of-thought problem solving, code generation, and few-shot learning. They arise from the model internalizing more complex statistical patterns as parameter count and training data increase.",
-      "answer": "**Emergent capabilities** in large language models (LLMs) refer to abilities that suddenly appear at certain scale thresholds and are not present in smaller models. According to Wei et al. (2022), over **130 emergent abilities** have been documented across models ranging from GPT-3 (175B) to PaLM (540B). Notable examples of these capabilities include:\n\n- **Multi-step arithmetic reasoning**\n- **Chain-of-thought problem solving**\n- **Code generation**\n- **Few-shot learning from in-context examples**\n\nThe **scaling hypothesis** suggests that these capabilities arise as models internalize more complex statistical patterns with increased parameter count and training data. However, the emergence of these capabilities introduces unpredictability, making it difficult for developers to anticipate which capabilities will appear at which scale. This has led to the development of new evaluation paradigms, such as **BIG-Bench**, which includes tasks designed to probe capabilities that standard evaluations may overlook.",
+      "answer": "**Emergent capabilities** in large language models (LLMs) refer to abilities that appear suddenly at certain scale thresholds and were not present in smaller models. According to [Source 1], over 130 such emergent abilities have been documented across models ranging from GPT-3 (175B) to PaLM (540B). Notable examples of these capabilities include:\n\n- **Multi-step arithmetic reasoning**\n- **Chain-of-thought problem solving**\n- **Code generation**\n- **Few-shot learning from in-context examples**\n\nThe emergence of these capabilities is linked to the scaling hypothesis, which suggests that as the parameter count and training data increase, models internalize more complex statistical patterns. However, the unpredictability of these emergent capabilities means that developers cannot reliably anticipate which capabilities will appear at which scale.",
       "route_decision": "retrieval",
       "retrieval_score": 0.7724490165710449,
       "num_sources": 3,
-      "latency_ms": 3645.1,
+      "latency_ms": 2577.0,
       "context_type": "retrieval"
     },
     {
       "id": 5,
       "question": "Explain Retrieval-Augmented Generation (RAG) and its key components.",
       "ground_truth": "RAG combines parametric knowledge in LLM weights with non-parametric knowledge retrieved from an external document store. It has two components: a dense retriever that encodes queries and documents into a shared embedding space, and a generative model that conditions its output on both the query and retrieved passages. It addresses LLMs' frozen knowledge limitation.",
-      "answer": "**Retrieval-Augmented Generation (RAG)** is a system that combines **parametric knowledge** stored in large language model (LLM) weights with **non-parametric knowledge** retrieved from an external document store. The architecture consists of two main components:\n\n- **Dense Retriever**: Typically using Dense Passage Retrieval (DPR), this component encodes both queries and documents into a shared embedding space to fetch relevant documents from a corpus.\n- **Generative Model**: Originally based on BART, this model generates responses conditioned on both the input query and the retrieved passages.\n\nRAG addresses the limitation of standalone LLMs, which have knowledge that is fixed at training time and cannot access recent or domain-specific information. It has shown improved performance on open-domain QA benchmarks compared to pure parametric models and traditional information retrieval systems. Modern RAG systems utilize vector databases (such as FAISS, Pinecone, Weaviate) for scalable similarity search and decoder-only LLMs (like GPT-4 and Llama) for real-time generation with citations, enhancing the accuracy and relevance of the generated responses.",
+      "answer": "**Retrieval-Augmented Generation (RAG)** is a system that combines **parametric knowledge** stored in large language model (LLM) weights with **non-parametric knowledge** retrieved from an external document store. It was introduced by Lewis et al. in 2020 and consists of two main components:\n\n- **Dense Retriever**: Typically using Dense Passage Retrieval (DPR), this component encodes both queries and documents into a shared embedding space, allowing for effective retrieval of relevant information.\n- **Generative Model**: Originally based on BART, this model generates output conditioned on both the query and the retrieved passages, enabling the production of grounded and factually accurate responses.\n\nRAG addresses the limitation of standalone LLMs, which have knowledge that is fixed at training time and cannot access recent or domain-specific information. It has demonstrated superior performance on open-domain QA benchmarks compared to both pure parametric models and traditional information retrieval systems. Modern RAG implementations utilize vector databases for scalable similarity search and decoder-only LLMs for generation, facilitating real-time grounding with citations. According to [Source 1], RAG's architecture effectively enhances the retrieval and generation process by integrating these two components.",
       "route_decision": "retrieval",
       "retrieval_score": 0.6279892325401306,
       "num_sources": 3,
-      "latency_ms": 3902.9,
+      "latency_ms": 3053.1,
       "context_type": "retrieval"
     },
     {
       "id": 6,
       "question": "What is RLHF and what are its three training stages?",
       "ground_truth": "RLHF (Reinforcement Learning from Human Feedback) has three stages: (1) supervised fine-tuning on high-quality human demonstrations, (2) reward model training where human raters rank model outputs, and (3) PPO fine-tuning of the SFT model against reward model scores. It transformed raw pre-trained LLMs into instruction-following assistants.",
-      "answer": "**Reinforcement Learning from Human Feedback (RLHF)** is an alignment technique that transforms raw pre-trained large language models (LLMs) into instruction-following assistants. The process consists of three stages:\n\n1. **Supervised Fine-Tuning (SFT)**: This stage involves training the model on high-quality human-written demonstrations of desired behavior.\n2. **Reward Model Training**: In this stage, human raters rank the model outputs, and a separate neural network learns to predict those rankings.\n3. **PPO (Proximal Policy Optimization) Fine-Tuning**: The final stage involves fine-tuning the SFT model against the scores generated by the reward model.\n\nAccording to [Source 1], RLHF is now standard practice for all major commercial LLMs, including GPT-4, Claude, and Gemini.",
+      "answer": "**Reinforcement Learning from Human Feedback (RLHF)** is an alignment technique that transforms raw pre-trained large language models (LLMs) into instruction-following assistants. The process consists of three training stages:\n\n1. **Supervised Fine-Tuning (SFT)**: This stage involves training the model on high-quality human-written demonstrations of desired behavior.\n2. **Reward Model Training**: In this stage, human raters rank the model's outputs, and a separate neural network learns to predict these rankings.\n3. **PPO (Proximal Policy Optimization) Fine-Tuning**: The final stage involves fine-tuning the SFT model against the scores provided by the reward model.\n\nAccording to [Source 1], RLHF is now standard practice for all major commercial LLMs, including GPT-4, Claude, and Gemini.",
       "route_decision": "retrieval",
       "retrieval_score": 0.43898090720176697,
       "num_sources": 3,
-      "latency_ms": 2941.0,
+      "latency_ms": 2255.5,
       "context_type": "retrieval"
     },
     {
       "id": 7,
       "question": "How does FAISS enable efficient semantic search?",
       "ground_truth": "FAISS (Facebook AI Similarity Search) enables efficient semantic search by storing document embeddings in specialized index structures. It supports multiple index types: Flat for exact brute-force, IVF for fast approximate search, and HNSW for hierarchical navigable small world graphs. Queries are encoded into vectors and approximate nearest-neighbor search finds the most similar documents in milliseconds.",
-      "answer": "FAISS (Facebook AI Similarity Search) enables efficient semantic search by supporting **approximate nearest-neighbor (ANN)** algorithms that can quickly retrieve the most similar documents from large datasets. It achieves this by mapping discrete objects into continuous high-dimensional spaces where geometric proximity reflects **semantic similarity**. When given a query embedding, FAISS can perform searches in milliseconds, making it suitable for applications requiring rapid retrieval.\n\nFAISS offers multiple index types, including:\n- **Flat**: Exact brute-force search.\n- **IVF**: Inverted file for fast approximate search.\n- **HNSW**: Hierarchical navigable small world graphs.\n\nFor production Retrieval-Augmented Generation (RAG) systems, the **IVFFlat** or **IVFPQ** indices are recommended as they provide the best balance between speed and recall, enhancing the overall efficiency of semantic search processes according to the context provided in [Source 1].",
+      "answer": "FAISS (Facebook AI Similarity Search) enables **efficient semantic search** by supporting **approximate nearest-neighbor (ANN)** algorithms that can quickly retrieve the most similar documents from large datasets. It achieves this by mapping discrete objects into continuous high-dimensional spaces where geometric proximity reflects semantic similarity. When given a query embedding, FAISS can retrieve relevant documents in milliseconds, making it suitable for production Retrieval-Augmented Generation (RAG) systems.\n\nFAISS supports multiple index types, including:\n- **Flat** (exact brute-force)\n- **IVF** (inverted file, fast approximate)\n- **HNSW** (hierarchical navigable small world graphs)\n\nFor optimal performance in production RAG systems, the **IVFFlat** or **IVFPQ** indices are recommended as they offer the best speed-recall trade-off. This capability allows for efficient handling of large volumes of data while maintaining retrieval accuracy, which is crucial for applications that require rapid and relevant document retrieval based on semantic similarity. According to [Source 1], these features make FAISS a powerful tool for semantic search tasks.",
       "route_decision": "retrieval",
       "retrieval_score": 0.4516211748123169,
       "num_sources": 3,
-      "latency_ms": 3719.8,
+      "latency_ms": 3268.1,
       "context_type": "retrieval"
     },
     {
       "id": 8,
       "question": "What is LangGraph and how does it differ from LangChain's AgentExecutor?",
       "ground_truth": "LangGraph extends LangChain to support stateful, multi-step, and cyclical agent workflows as explicit directed graphs. Unlike AgentExecutor's simple loops, LangGraph models agent behavior as a StateGraph where nodes are Python functions and edges are deterministic or conditional. It provides built-in persistence via checkpointers, human-in-the-loop support, and streaming at both node and token levels.",
-      "answer": "**LangGraph** is an open-source library from LangChain that enhances the LangChain Expression Language to facilitate **stateful, multi-step, and cyclical agent workflows** represented as explicit directed graphs. In contrast to LangChain's **linear chains** or simple **AgentExecutor loops**, LangGraph models agent behavior as a **StateGraph**, where nodes are Python functions and edges can be deterministic or conditional. \n\nKey features of LangGraph include:\n- **Built-in persistence** via checkpointers (MemorySaver for in-memory, SqliteSaver for disk) for multi-turn conversation memory and fault-tolerant workflows.\n- **Human-in-the-loop support** through interrupt hooks.\n- **Streaming** capabilities at both the node and token levels.\n- Support for **subgraphs**, **parallel fan-out**, and **map-reduce patterns**.\n\nThese features make LangGraph suitable for production use in complex agentic systems that require reliable state management across multiple LLM calls, differentiating it from the simpler orchestration provided by LangChain's AgentExecutor, which does not support the same level of stateful and cyclical workflows. According to [Source 1], LangGraph's design allows for more sophisticated agent interactions and memory management compared to the traditional linear execution model of AgentExecutor.",
+      "answer": "**LangGraph** is an open-source library from LangChain designed to support **stateful, multi-step, and cyclical agent workflows** as explicit directed graphs. It models agent behavior as a **StateGraph**, where nodes are Python functions and edges can be either deterministic or conditional. The state within LangGraph is represented as a **TypedDict** that flows through the graph, allowing each node to receive the full state and return a partial update. \n\nIn contrast to **LangChain's AgentExecutor**, which operates with linear chains or simple loops, LangGraph provides several advanced features, including:\n- **Built-in persistence** via checkpointers for memory management.\n- **Human-in-the-loop support** through specific hooks.\n- **Streaming capabilities** at both node and token levels.\n- Support for **subgraphs**, parallel fan-out, and map-reduce patterns.\n\nThese features make LangGraph suitable for complex agentic systems that require reliable state management across multiple LLM calls, distinguishing it from the more straightforward execution model of LangChain's AgentExecutor. According to [Source 1], LangGraph is particularly beneficial for multi-turn conversations and long-running workflows.",
       "route_decision": "retrieval",
       "retrieval_score": 0.6547573804855347,
       "num_sources": 3,
-      "latency_ms": 6930.8,
+      "latency_ms": 4556.3,
       "context_type": "retrieval"
     },
     {
       "id": 9,
       "question": "What is chain-of-thought prompting and how does it improve LLM reasoning?",
       "ground_truth": "Chain-of-thought prompting includes intermediate reasoning steps in few-shot examples rather than just input-output pairs. On PaLM (540B), CoT improved GSM8K math accuracy from 17.9% to 56.9%. Zero-shot CoT discovered that appending 'Let's think step by step' elicits similar reasoning chains without examples.",
-      "answer": "**Chain-of-thought (CoT) prompting** is a technique used in large language models (LLMs) to enhance multi-step reasoning by including example reasoning chains in the prompts. This method involves showing not just input-output pairs but also the intermediate reasoning steps that lead to the final answer. For instance, in a math word problem, the full arithmetic reasoning trace is provided before arriving at the numerical answer. According to [Source 1], experiments on the PaLM model demonstrated that CoT prompting significantly improved accuracy on grade-school math tasks, increasing performance from **17.9% to 56.9%**, which is a **3× improvement**.\n\nCoT prompting has been shown to improve performance across various models and tasks. For example, in [Source 2], it was noted that using CoT with GPT-3 improved accuracy on the GSM8K dataset from **17.9% to 46.9%**, and with GPT-4, the accuracy reached **92%**. Additionally, a zero-shot version of CoT, which simply appends the phrase \"Let's think step by step\" to a question, also elicits similar reasoning chains and has achieved notable accuracy on tasks like MultiArith and GSM8K.\n\nOverall, CoT prompting enhances LLM reasoning by structuring the thought process explicitly, allowing the models to follow a logical sequence that leads to more accurate and reliable outputs.",
+      "answer": "**Chain-of-thought (CoT) prompting** is a technique used in large language models (LLMs) to enhance reasoning by including **intermediate reasoning steps** in the prompts. Introduced by Wei et al. (2022), CoT prompting involves showing not just the input-output pairs but also the full reasoning process that leads to the final answer. This method has been shown to significantly improve accuracy on tasks that require arithmetic and logical reasoning. For instance, experiments demonstrated that CoT prompting improved accuracy on the GSM8K grade-school math dataset from **17.9% to 56.9%**, marking a **3× improvement**.\n\nAdditionally, **zero-shot CoT** prompting, which simply appends the phrase \"Let's think step by step\" to a question, can also elicit similar reasoning chains without providing examples. This approach achieved notable results, such as **78.7% accuracy on MultiArith** and **40.7% on GSM8K** with InstructGPT. Other techniques related to CoT prompting, such as **self-consistency** and **tree-of-thought**, further enhance the reasoning capabilities of LLMs by exploring multiple reasoning paths and decomposing complex problems into simpler sub-problems. These advancements have become standard practices in prompt engineering for tasks involving arithmetic, logic, and multi-hop reasoning, leading to improved performance across various benchmarks.",
       "route_decision": "retrieval",
       "retrieval_score": 0.6233857870101929,
       "num_sources": 3,
-      "latency_ms": 9329.4,
+      "latency_ms": 3159.7,
       "context_type": "retrieval"
     },
     {
       "id": 10,
       "question": "What professional benchmarks did GPT-4 achieve human-level performance on?",
       "ground_truth": "GPT-4 achieved human-level performance on the Uniform Bar Exam (top 10%, score 298/400), 88th percentile on the LSAT, and 90th percentile on the SAT Math section. It uses RLHF and Constitutional AI-inspired safety training.",
-      "answer": "GPT-4 achieved human-level performance on the following professional benchmarks:\n\n- **Uniform Bar Exam**: Scored 298 out of 400, placing in the top 10%.\n- **LSAT**: Scored in the 88th percentile.\n- **SAT Math section**: Scored in the 90th percentile.\n\nThese results indicate its strong performance across various academic and professional assessments, as noted in the GPT-4 Technical Report [Source 1].",
+      "answer": "GPT-4 achieved human-level performance on the following professional benchmarks:\n\n- **Uniform Bar Exam**: Scored in the top 10% (Score: 298/400)\n- **LSAT**: 88th percentile\n- **SAT Math section**: 90th percentile\n\nThese achievements indicate GPT-4's strong capabilities in professional and academic assessments, as noted in the context from the GPT-4 Technical Report.",
       "route_decision": "retrieval",
       "retrieval_score": 0.604216992855072,
       "num_sources": 3,
-      "latency_ms": 2526.6,
+      "latency_ms": 2588.6,
       "context_type": "retrieval"
     },
     {
       "id": 11,
       "question": "What are the key challenges in production agentic AI systems?",
       "ground_truth": "Key challenges include hallucinated tool calls where the model invents non-existent APIs, compounding errors where mistakes propagate through steps, infinite loops without termination conditions, and latency from multiple LLM and tool calls. Mitigations include structured output validation with Pydantic, maximum step limits, explicit state tracking with LangGraph, and human-in-the-loop checkpoints.",
-      "answer": "The **key challenges** in production agentic AI systems include:\n\n- **Hallucinated tool calls**: The model may invent non-existent APIs.\n- **Compounding errors**: Mistakes made in early steps can propagate to later steps.\n- **Infinite loops**: There may be no termination condition, leading to endless execution.\n- **Latency**: Each LLM and tool call can add 1–5 seconds of wall time.\n\nMitigations for these challenges include structured output validation, maximum step limits, explicit state tracking, and human-in-the-loop checkpoints for high-stakes actions, as noted in [Source 1].",
+      "answer": "The **key challenges** in production agentic AI systems include:\n\n- **Hallucinated tool calls**: The model may invent non-existent APIs.\n- **Compounding errors**: Mistakes in early steps can propagate to later steps.\n- **Infinite loops**: There may be no termination condition, leading to endless execution.\n- **Latency**: Each LLM and tool call can add 1–5 seconds of wall time.\n\nMitigations for these challenges include structured output validation, maximum step limits, explicit state tracking, and human-in-the-loop checkpoints for high-stakes actions, as noted in [Source 1].",
       "route_decision": "retrieval",
       "retrieval_score": 0.6951538920402527,
       "num_sources": 3,
-      "latency_ms": 2597.5,
+      "latency_ms": 2062.9,
       "context_type": "retrieval"
     },
     {
       "id": 12,
       "question": "How many parameters does BERT-Base have compared to BERT-Large?",
       "ground_truth": "BERT-Base contains 110M parameters with 12 layers, 768 hidden size, and 12 attention heads. BERT-Large has 340M parameters. Fine-tuned BERT set new state-of-the-art results on 11 NLP benchmarks at publication time.",
-      "answer": "BERT-Base contains **110 million parameters**, while BERT-Large has **340 million parameters**. According to [Source 1], BERT-Base has 12 layers, a hidden size of 768, and 12 attention heads, whereas BERT-Large has a larger configuration.",
+      "answer": "BERT-Base contains **110 million parameters**, while BERT-Large has **340 million parameters**. According to [Source 1], BERT-Base has **12 layers**, a **hidden size of 768**, and **12 attention heads**, whereas BERT-Large has a larger parameter count.",
       "route_decision": "retrieval",
       "retrieval_score": 0.5484048128128052,
       "num_sources": 3,
-      "latency_ms": 1760.7,
+      "latency_ms": 1393.0,
       "context_type": "retrieval"
     },
     {
       "id": 13,
       "question": "What is the ReAct pattern in agentic AI systems?",
       "ground_truth": "ReAct (Reasoning + Acting) is an architectural pattern that interleaves chain-of-thought reasoning with tool calls. The agent reasons about what action to take, executes the tool, observes the result, and repeats until the task is complete. It is one of the most common patterns in production agentic systems.",
-      "answer": "The **ReAct** pattern in agentic AI systems stands for **Reasoning + Acting**. It interleaves **chain-of-thought reasoning** with **tool calls** to accomplish tasks specified in natural language. This pattern allows agents to operate in a loop where they perceive the state, reason about actions, execute a tool, observe the result, and repeat this process until the task is complete. \n\nThis approach is part of the broader architectural patterns used in agentic AI systems, which also include Plan-and-Execute and Reflection patterns. Each of these patterns addresses different aspects of task execution and error management in AI systems, with ReAct specifically focusing on the integration of reasoning and action execution. According to [Source 1], the ReAct pattern is essential for enabling agents to effectively navigate complex tasks.",
+      "answer": "The **ReAct** (Reasoning + Acting) pattern in **agentic AI systems** is an architectural approach that interleaves chain-of-thought reasoning with tool calls. This means that the system alternates between reasoning about the task at hand and executing actions through tool usage. The ReAct pattern is part of a broader framework where agents operate in a loop, which includes perceiving the state, reasoning about actions, executing a tool, observing the result, and repeating this process until the task is complete. \n\nThis pattern is one of several common architectural patterns used in agentic AI systems, which also include Plan-and-Execute and Reflection patterns. Each of these patterns addresses different aspects of how agents can effectively accomplish goals specified in natural language while managing challenges such as hallucinated tool calls and compounding errors [Source 1].",
       "route_decision": "retrieval",
       "retrieval_score": 0.5474600791931152,
       "num_sources": 3,
-      "latency_ms": 3380.6,
+      "latency_ms": 2063.2,
       "context_type": "retrieval"
     },
     {
       "id": 14,
       "question": "What is the MTEB benchmark used to evaluate?",
       "ground_truth": "MTEB (Massive Text Embedding Benchmark) covers 56 datasets across 8 retrieval, clustering, and classification tasks. It is used to evaluate embedding models and compare their performance on diverse NLP tasks.",
-      "answer": "The context provided does not mention the **MTEB benchmark** or its specific use for evaluation. It covers various evaluation frameworks such as **HELM**, **BIG-Bench**, and **MMLU**, detailing their methodologies and the types of tasks they evaluate. However, there is no information regarding MTEB or its evaluation criteria. Therefore, I cannot answer the question about the MTEB benchmark from the available documents.",
+      "answer": "The context provided does not mention the **MTEB benchmark** or its specific use for evaluation. It covers various evaluation frameworks such as **HELM**, **BIG-Bench**, and **MMLU**, detailing their methodologies and the types of tasks they evaluate. However, there is no information regarding MTEB. Therefore, I cannot answer the question about what the MTEB benchmark is used to evaluate based on the available documents.",
       "route_decision": "retrieval",
       "retrieval_score": 0.4683230519294739,
       "num_sources": 3,
-      "latency_ms": 1975.2,
+      "latency_ms": 2302.0,
       "context_type": "retrieval"
     },
     {
       "id": 15,
       "question": "What does L2 normalization do to vectors before FAISS indexing?",
       "ground_truth": "L2 normalization scales vectors to unit length so that inner-product similarity equals cosine similarity. This allows using the faster IndexFlatIP (inner product) index while still measuring cosine similarity between query and document vectors.",
-      "answer": "The provided context does not mention L2 normalization or its effects on vectors before FAISS indexing. It discusses vector embeddings, semantic search, and various indexing types used by FAISS, but does not cover the specific process of L2 normalization. Therefore, I cannot answer the rest of your question based on the available documents.",
+      "answer": "The provided context does not mention L2 normalization or its effects on vectors before FAISS indexing. It discusses vector embeddings, semantic search, and various indexing methods used by FAISS, but does not provide specific information about L2 normalization. Therefore, I cannot answer the question regarding L2 normalization based on the available documents.",
       "route_decision": "retrieval",
       "retrieval_score": 0.33315032720565796,
       "num_sources": 3,
-      "latency_ms": 1551.3,
+      "latency_ms": 2009.6,
       "context_type": "retrieval"
     },
     {
       "id": 16,
       "question": "What is sentence-BERT and how does it differ from BERT for sentence similarity?",
       "ground_truth": "Sentence-BERT extends BERT to produce fixed-size sentence embeddings by adding a pooling layer and fine-tuning on Natural Language Inference datasets with a siamese network objective. Unlike BERT which requires both sentences to be fed together, Sentence-BERT independently encodes sentences enabling efficient semantic search.",
-      "answer": "**Sentence-BERT** is an extension of BERT that produces fixed-size sentence embeddings. It achieves this by adding a pooling layer and fine-tuning on Natural Language Inference datasets using a **siamese network objective**. This adaptation allows Sentence-BERT to generate embeddings that support efficient semantic search, enabling the retrieval of similar documents based on geometric proximity in high-dimensional space.\n\nThe key difference between **Sentence-BERT** and **BERT** lies in their objectives and outputs:\n- **BERT** is designed for various NLP tasks using a masked language modeling (MLM) objective and Next Sentence Prediction (NSP), focusing on understanding relationships within text.\n- **Sentence-BERT** specifically targets the generation of sentence embeddings optimized for measuring sentence similarity, making it more suitable for tasks like semantic search compared to the original BERT model, which does not produce fixed-size embeddings directly. \n\nThis distinction allows Sentence-BERT to be more effective in applications requiring quick retrieval of semantically similar sentences or documents.",
+      "answer": "**Sentence-BERT** is an extension of BERT that produces fixed-size sentence embeddings. It achieves this by adding a pooling layer and fine-tuning on Natural Language Inference datasets using a **siamese network objective**. This adaptation allows Sentence-BERT to generate embeddings that support efficient semantic search, enabling the retrieval of similar documents based on geometric proximity in high-dimensional space.\n\nThe key difference between **Sentence-BERT** and **BERT** lies in their output and purpose. While BERT is designed for various NLP tasks and uses a masked language modeling objective, Sentence-BERT focuses specifically on creating embeddings for sentences, which are then used for tasks like semantic similarity and retrieval. This specialization makes Sentence-BERT particularly effective for applications that require comparing the semantic similarity of sentences, unlike BERT, which is more general-purpose in its application. According to [Source 2], the embeddings produced by Sentence-BERT facilitate efficient semantic search through approximate nearest-neighbor algorithms.",
       "route_decision": "retrieval",
       "retrieval_score": 0.5568341612815857,
       "num_sources": 3,
-      "latency_ms": 3546.4,
+      "latency_ms": 2925.4,
       "context_type": "retrieval"
     },
     {
       "id": 17,
       "question": "What is the Next Sentence Prediction task in BERT pre-training?",
       "ground_truth": "Next Sentence Prediction (NSP) trains BERT to understand relationships between sentence pairs. Given two sentences A and B, the model predicts whether B naturally follows A in a document. This trains BERT on inter-sentence coherence, which is useful for tasks like question answering and natural language inference.",
-      "answer": "The **Next Sentence Prediction (NSP)** task in BERT pre-training is designed to train the model to understand relationships between sentence pairs. This task is one of the two pre-training objectives used in BERT, the other being the **masked language modeling (MLM)** objective. According to [Source 1], NSP helps the model learn how sentences relate to each other, which is crucial for various natural language processing tasks.",
+      "answer": "The **Next Sentence Prediction (NSP)** task in BERT pre-training is designed to train the model to understand relationships between sentence pairs. According to [Source 1], this task is one of the two pre-training objectives used in BERT, alongside the masked language modeling (MLM) objective. The NSP task helps the model learn how sentences relate to one another, which is crucial for various natural language processing tasks.",
       "route_decision": "retrieval",
       "retrieval_score": 0.7225004434585571,
       "num_sources": 3,
-      "latency_ms": 2025.6,
+      "latency_ms": 1761.0,
       "context_type": "retrieval"
     },
     {
       "id": 18,
       "question": "What is the Plan-and-Execute pattern in agentic systems?",
       "ground_truth": "Plan-and-Execute separates high-level planning from low-level execution. The planner creates a multi-step plan for the task, and a separate executor carries out each step. This separation allows the planner to reason about the full task without being distracted by execution details.",
-      "answer": "The **Plan-and-Execute** pattern in agentic systems is characterized by the separation of **high-level planning** from **low-level execution**. This architectural approach allows agents to first devise a strategy or plan to achieve a goal before carrying out the specific actions required to implement that plan. This separation can help streamline the process and improve the efficiency of task completion by clearly delineating the planning phase from the execution phase, enabling more organized and structured workflows in agentic AI systems. \n\nThis pattern is one of several common architectural patterns used in agentic AI systems, which also include **ReAct** (Reasoning + Acting) and **Reflection** (which adds a self-critique step) according to the context provided in [Source 1].",
+      "answer": "The **Plan-and-Execute** pattern in agentic systems is characterized by the separation of high-level planning from low-level execution. This architectural pattern allows an agent to first devise a strategy or plan for accomplishing a task before carrying out the specific actions required to execute that plan. This separation can help streamline the process and improve the efficiency of task completion by clearly delineating the planning phase from the execution phase, enabling more organized and effective agent behavior.\n\nAccording to [Source 1], this pattern is one of several common architectural approaches used in agentic AI systems, which also include ReAct (Reasoning + Acting) and Reflection.",
       "route_decision": "retrieval",
       "retrieval_score": 0.6562114953994751,
       "num_sources": 3,
-      "latency_ms": 2969.8,
+      "latency_ms": 1867.8,
       "context_type": "retrieval"
     },
     {
       "id": 19,
       "question": "How does MemorySaver work in LangGraph?",
       "ground_truth": "MemorySaver stores the full graph state as an in-memory checkpoint keyed by thread_id and checkpoint_id. Each user session gets a stable thread_id so that multi-turn conversation history is preserved across graph invocations within the same process. It can be swapped with SqliteSaver or PostgresSaver for persistence across restarts.",
-      "answer": "According to [Source 1], **MemorySaver** in LangGraph provides **built-in persistence** for managing state during workflows. It is designed for **in-memory** storage, allowing for **multi-turn conversation memory** and enabling workflows to be **fault-tolerant** over long durations. This means that MemorySaver helps maintain the state of conversations or processes even if interruptions occur, ensuring that the system can recover and continue functioning without losing context. \n\nThe context does not provide further details on the specific mechanisms or implementation of MemorySaver beyond its purpose and capabilities.",
+      "answer": "According to [Source 1], **MemorySaver** in LangGraph is a built-in persistence feature that enables **multi-turn conversation memory** and supports **fault-tolerant long-running workflows**. It is designed for in-memory storage, allowing the state to be maintained across multiple steps in the agent workflow. \n\nThe context does not provide further details on the specific mechanisms or implementation of MemorySaver beyond its purpose and capabilities.",
       "route_decision": "retrieval",
       "retrieval_score": 0.5490127801895142,
       "num_sources": 3,
-      "latency_ms": 2140.4,
+      "latency_ms": 1577.3,
       "context_type": "retrieval"
     },
     {
       "id": 20,
       "question": "What is the BIG-Bench benchmark designed to evaluate?",
       "ground_truth": "BIG-Bench includes 200+ tasks specifically designed to probe LLM capabilities that benchmark saturation renders invisible in standard evaluations. It was introduced to evaluate emergent capabilities and tasks where existing benchmarks are insufficient.",
-      "answer": "The **BIG-Bench** benchmark, introduced by Srivastava et al. in 2022, is designed to evaluate the capabilities of language models at and beyond the frontier of current models. It comprises **204 tasks** contributed by **450 researchers** from **132 institutions**. Additionally, it includes a subset called **BIG-Bench Hard (BBH)**, which extracts **23 tasks** where large models previously performed below human rater level. The benchmark aims to probe various aspects of model performance through these diverse tasks.",
+      "answer": "The **BIG-Bench** benchmark, also known as Beyond the Imitation Game, is designed to evaluate the capabilities of language models at and beyond the frontier of current models. It comprises **204 tasks** contributed by **450 researchers** from **132 institutions**. Specifically, **BIG-Bench Hard (BBH)** extracts **23 tasks** where large models previously performed below human rater level. The benchmark aims to probe various capabilities of language models through these diverse tasks, utilizing techniques such as **Chain-of-Thought prompting** to enhance performance on the tasks. According to the context, GPT-4 achieves an average of **89.2%** on BBH tasks.",
       "route_decision": "retrieval",
       "retrieval_score": 0.5535451173782349,
       "num_sources": 3,
-      "latency_ms": 2347.7,
+      "latency_ms": 2097.1,
       "context_type": "retrieval"
     },
     {
       "id": 21,
       "question": "What is the difference between IVFFlat and HNSW FAISS index types?",
       "ground_truth": "IVFFlat (Inverted File Flat) partitions vectors into clusters and searches only nearby clusters, offering fast approximate search with good recall. HNSW (Hierarchical Navigable Small World) builds a multi-layer graph structure enabling logarithmic-time search. For production RAG, IVFFlat and IVFPQ offer the best speed-recall trade-off.",
-      "answer": "The provided context does not contain any information regarding **IVFFlat** or **HNSW FAISS index types**. It discusses **FlashAttention** and **LoRA** but does not cover any details about indexing methods or their differences. Therefore, I cannot answer the question about the differences between IVFFlat and HNSW FAISS index types based on the available documents.",
+      "answer": "The provided context does not contain any information regarding **IVFFlat** or **HNSW FAISS index types**. It focuses on **FlashAttention** and **LoRA** (Low-Rank Adaptation) for large language models, detailing their functionalities and benefits. \n\nTherefore, I cannot answer the question about the differences between IVFFlat and HNSW FAISS index types based on the available documents.",
       "route_decision": "retrieval",
       "retrieval_score": 0.2369093894958496,
       "num_sources": 3,
-      "latency_ms": 2554.3,
+      "latency_ms": 1668.9,
       "context_type": "retrieval"
     },
     {
       "id": 22,
       "question": "What is self-consistency prompting?",
       "ground_truth": "Self-consistency samples multiple reasoning paths from the model for the same question and majority-votes the final answer. It improves over single chain-of-thought by leveraging the diversity of reasoning paths, particularly for arithmetic and logical reasoning tasks.",
-      "answer": "**Self-consistency prompting** is a technique that improves the accuracy of language models by sampling multiple reasoning paths and taking a majority vote over the final answers. This method reduces variance in the model's outputs by averaging the results from different reasoning attempts, leading to an accuracy improvement of **5-15%** across various benchmarks. This approach is particularly beneficial in conjunction with chain-of-thought (CoT) prompting, as it enhances the reliability of the model's responses by leveraging multiple perspectives on the reasoning process. \n\nAccording to the context, self-consistency is part of a broader set of techniques that include CoT prompting and tree-of-thought prompting, which are standard in production prompt engineering for tasks that require arithmetic, logic, and multi-hop reasoning.",
+      "answer": "**Self-consistency prompting** is a technique that improves the accuracy of language models by sampling multiple reasoning paths and taking a majority vote over the final answers. This approach reduces variance in the outputs by 5-15% across various benchmarks. It is used in conjunction with chain-of-thought (CoT) prompting to enhance the model's reasoning capabilities and overall performance on tasks that require logical and mathematical reasoning, as noted in the context from [Source 1] and [Source 2].",
       "route_decision": "retrieval",
       "retrieval_score": 0.3729138672351837,
       "num_sources": 3,
-      "latency_ms": 3098.2,
+      "latency_ms": 1979.2,
       "context_type": "retrieval"
     },
     {
       "id": 23,
       "question": "How did InstructGPT demonstrate RLHF's effectiveness?",
       "ground_truth": "InstructGPT showed that a 1.3B RLHF-tuned model was preferred by human raters over a 175B model trained only with next-token prediction. This demonstrated that alignment technique quality can compensate for a 100x difference in model size.",
-      "answer": "InstructGPT demonstrated the effectiveness of **Reinforcement Learning from Human Feedback (RLHF)** by showing that a **1.3B RLHF-tuned model** was preferred by human raters over a significantly larger **175B model** that was trained only with next-token prediction. This comparison highlighted the advantages of using RLHF in transforming raw pre-trained language models into instruction-following assistants, indicating that the alignment technique could produce models that better meet user expectations and preferences. \n\nThe success of InstructGPT in this regard serves as a key example of how RLHF can enhance model performance through human feedback, reinforcing its adoption as a standard practice for major commercial language models, including GPT-4, Claude, and Gemini, despite the challenges associated with human annotation and potential reward hacking issues if the reward model is misspecified. According to [Source 1], this process involves multiple stages, including supervised fine-tuning and reward model training, culminating in fine-tuning against the reward model's scores.",
+      "answer": "InstructGPT demonstrated the effectiveness of **Reinforcement Learning from Human Feedback (RLHF)** by showing that a 1.3 billion parameter RLHF-tuned model was preferred by human raters over a significantly larger 175 billion parameter model that was trained only with next-token prediction. This comparison highlighted the advantages of RLHF in transforming raw pre-trained language models into instruction-following assistants, emphasizing the importance of human feedback in improving model performance and alignment with user expectations. According to [Source 1], this preference by human raters serves as evidence of RLHF's capability to enhance model behavior effectively.",
       "route_decision": "retrieval",
       "retrieval_score": 0.4117019772529602,
       "num_sources": 3,
-      "latency_ms": 3299.0,
+      "latency_ms": 2029.0,
       "context_type": "retrieval"
     },
     {
       "id": 24,
       "question": "What is positional encoding in Transformers and why is it needed?",
       "ground_truth": "Positional encodings are added to input embeddings to inject sequential order information that the attention mechanism itself cannot capture. Since self-attention processes all tokens in parallel without any inherent notion of position, positional encodings provide the model with information about the relative or absolute position of tokens in the sequence.",
-      "answer": "**Positional encoding** in Transformers is a method used to inject **sequential order information** into the input embeddings, which the attention mechanism itself cannot capture. This is necessary because Transformers process all tokens in parallel, unlike recurrent networks (RNNs) and long short-term memory networks (LSTMs) that process tokens sequentially. Without positional encoding, the model would treat the input tokens as a bag of words, losing the information about the order in which they appear.\n\nThe original Transformer architecture adds positional encodings to the input embeddings to ensure that the model can understand the sequence of tokens. This allows the multi-head self-attention mechanism to produce context-aware representations that take into account the position of each token relative to others in the sequence. According to [Source 2], the original architecture utilizes positional encodings to maintain the necessary sequential context for effective processing.",
+      "answer": "**Positional encoding** in Transformers is a method used to inject **sequential order information** into the input embeddings, which the attention mechanism itself cannot capture. Since Transformers process all tokens in parallel, they lack an inherent understanding of the order of tokens, which is crucial for understanding context in language. Positional encodings are added to the input embeddings to address this limitation and ensure that the model can recognize the sequence of words or tokens.\n\nThe original Transformer architecture, as introduced in \"Attention Is All You Need,\" employs positional encodings to provide this sequential information, allowing the model to generate context-aware representations through its self-attention mechanisms. Different methods of positional encoding, such as learned absolute position embeddings, sinusoidal embeddings, and Rotary Position Embeddings (RoPE), have been developed to enhance this aspect of the model's performance [Source 1][Source 2].",
       "route_decision": "retrieval",
       "retrieval_score": 0.5464237332344055,
       "num_sources": 3,
-      "latency_ms": 2729.2,
+      "latency_ms": 2502.8,
       "context_type": "retrieval"
     },
     {
       "id": 25,
       "question": "What is least-to-most prompting?",
       "ground_truth": "Least-to-most prompting decomposes complex problems into simpler sub-problems and solves them in order from least to most complex. Each sub-problem's solution is used as context for the next, enabling the model to solve problems that require multiple reasoning steps.",
-      "answer": "The context does not provide a detailed explanation of **least-to-most prompting**. However, it does mention that least-to-most prompting is a technique that involves **decomposing complex problems into simpler sub-problems**. This approach is part of the broader set of techniques used in prompt engineering for tasks that require arithmetic, logic, and multi-hop reasoning, as noted in [Source 2]. \n\nUnfortunately, the context does not elaborate further on how least-to-most prompting is implemented or its specific benefits.",
+      "answer": "The context does not provide a detailed explanation of **least-to-most prompting**. However, it mentions that this technique involves **decomposing complex problems into simpler sub-problems**. This approach is part of the advancements in prompt engineering techniques for tasks that require arithmetic, logic, and multi-hop reasoning, as noted in the discussions of various prompting strategies. \n\nFor further details on least-to-most prompting, the context does not elaborate beyond this description, so I cannot provide additional information.",
       "route_decision": "retrieval",
       "retrieval_score": 0.47528451681137085,
       "num_sources": 3,
-      "latency_ms": 2016.7,
+      "latency_ms": 1939.7,
       "context_type": "retrieval"
     },
     {
@@ -305,18 +327,18 @@
       "route_decision": "direct",
       "retrieval_score": 0.0,
       "num_sources": 0,
-      "latency_ms": 866.9,
+      "latency_ms": 926.8,
       "context_type": "direct"
     },
     {
       "id": 27,
       "question": "What is your name and what can you help me with?",
       "ground_truth": "The assistant should introduce itself as AgentIQ, a research assistant that routes questions to retrieval, web search, or direct answering.",
-      "answer": "Hello! I'm AgentIQ, and I'm here to help you with a variety of topics, whether it's answering questions, providing information, or assisting with research. What do you need help with today?",
+      "answer": "Hello! I'm AgentIQ, and I'm here to help you with a variety of topics, whether it's answering questions, providing information, or assisting with research. Just let me know what you need!",
       "route_decision": "direct",
       "retrieval_score": 0.0,
       "num_sources": 0,
-      "latency_ms": 1065.1,
+      "latency_ms": 1187.7,
       "context_type": "direct"
     },
     {
@@ -327,7 +349,7 @@
       "route_decision": "direct",
       "retrieval_score": 0.0,
       "num_sources": 0,
-      "latency_ms": 1230.9,
+      "latency_ms": 1064.7,
       "context_type": "direct"
     },
     {
@@ -338,7 +360,7 @@
       "route_decision": "direct",
       "retrieval_score": 0.0,
       "num_sources": 0,
-      "latency_ms": 997.8,
+      "latency_ms": 980.5,
       "context_type": "direct"
     },
     {
@@ -349,7 +371,7 @@
       "route_decision": "direct",
       "retrieval_score": 0.0,
       "num_sources": 0,
-      "latency_ms": 844.4,
+      "latency_ms": 940.5,
       "context_type": "direct"
     },
     {
@@ -360,29 +382,29 @@
       "route_decision": "direct",
       "retrieval_score": 0.0,
       "num_sources": 0,
-      "latency_ms": 1064.5,
+      "latency_ms": 1127.7,
       "context_type": "direct"
     },
     {
       "id": 32,
       "question": "What is the chemical symbol for gold?",
       "ground_truth": "The chemical symbol for gold is Au.",
-      "answer": "The chemical symbol for gold is Au.",
+      "answer": "The chemical symbol for gold is Au. It comes from the Latin word \"aurum,\" which means \"shining dawn.\"",
       "route_decision": "direct",
       "retrieval_score": 0.0,
       "num_sources": 0,
-      "latency_ms": 795.7,
+      "latency_ms": 929.0,
       "context_type": "direct"
     },
     {
       "id": 33,
       "question": "How many continents are there on Earth?",
       "ground_truth": "There are seven continents: Africa, Antarctica, Asia, Australia, Europe, North America, and South America.",
-      "answer": "There are seven continents on Earth: Africa, Antarctica, Asia, Europe, North America, Australia, and South America. If you have any more questions about them, feel free to ask!",
+      "answer": "There are seven continents on Earth: Africa, Antarctica, Asia, Australia, Europe, North America, and South America. If you have any more questions about them, feel free to ask!",
       "route_decision": "direct",
       "retrieval_score": 0.0,
       "num_sources": 0,
-      "latency_ms": 1250.6,
+      "latency_ms": 1071.5,
       "context_type": "direct"
     },
     {
@@ -393,7 +415,7 @@
       "route_decision": "direct",
       "retrieval_score": 0.0,
       "num_sources": 0,
-      "latency_ms": 893.3,
+      "latency_ms": 1000.1,
       "context_type": "direct"
     },
     {
@@ -404,7 +426,7 @@
       "route_decision": "direct",
       "retrieval_score": 0.0,
       "num_sources": 0,
-      "latency_ms": 807.7,
+      "latency_ms": 925.7,
       "context_type": "direct"
     },
     {
@@ -415,18 +437,18 @@
       "route_decision": "direct",
       "retrieval_score": 0.0,
       "num_sources": 0,
-      "latency_ms": 1117.7,
+      "latency_ms": 1786.8,
       "context_type": "direct"
     },
     {
       "id": 37,
       "question": "What is the freezing point of water in Fahrenheit?",
       "ground_truth": "Water freezes at 32 degrees Fahrenheit.",
-      "answer": "The freezing point of water is 32 degrees Fahrenheit.",
+      "answer": "The freezing point of water is 32 degrees Fahrenheit. If you have any more questions, feel free to ask!",
       "route_decision": "direct",
       "retrieval_score": 0.0,
       "num_sources": 0,
-      "latency_ms": 973.2,
+      "latency_ms": 1069.0,
       "context_type": "direct"
     },
     {
@@ -437,139 +459,139 @@
       "route_decision": "direct",
       "retrieval_score": 0.0,
       "num_sources": 0,
-      "latency_ms": 1105.1,
+      "latency_ms": 1203.1,
       "context_type": "direct"
     },
     {
       "id": 39,
       "question": "What is the current stock price of Apple (AAPL)?",
       "ground_truth": "This requires a live web search — stock prices change continuously and cannot be answered from static training data or the local document corpus.",
-      "answer": "The current stock price of Apple (AAPL) is **$313.45** as of the latest update on August 26, 2026, with an after-hours price of **$310.65**. The day's trading range was from **$308.80 to $315.43** according to [Source 1].",
+      "answer": "The current stock price of Apple (AAPL) is **$313.45** as of August 26, 2026, with an after-hours price of **$310.65**. The day's range for the stock is from **$308.80 to $315.43** according to the data provided in the context from [Source 1].",
       "route_decision": "web_search",
       "retrieval_score": 0.0,
       "num_sources": 5,
-      "latency_ms": 3300.8,
+      "latency_ms": 4968.2,
       "context_type": "web_search"
     },
     {
       "id": 40,
       "question": "What is today's date?",
       "ground_truth": "This requires live/current information, not static training data.",
-      "answer": "Today's date is **Thursday, August 27, 2026**. It can be represented in various formats:\n\n- **ISO 8601**: 2026-08-27\n- **US Format (MM/DD/YYYY)**: 08/27/2026\n- **EU Format (DD/MM/YYYY)**: 27/08/2026\n- **RFC 2822**: Thu, 27 Aug 2026 16:59:09 +0000\n\nThis date is consistent across multiple sources, confirming its accuracy ([Source 1], [Source 2], [Source 4]).",
+      "answer": "Today's date is **Friday, August 28, 2026**. \n\nIn various formats, it can be represented as:\n- **ISO 8601**: 2026-08-28\n- **US Format (MM/DD/YYYY)**: 08/28/2026\n- **EU Format (DD/MM/YYYY)**: 28/08/2026\n- **Unix Epoch**: 1787935481\n\nThis date is also noted as day **240** of the year 2026, which is not a leap year, with **125 days** remaining in the year [Source 1][Source 2][Source 3].",
       "route_decision": "web_search",
       "retrieval_score": 0.0,
       "num_sources": 5,
-      "latency_ms": 3882.4,
+      "latency_ms": 4071.9,
       "context_type": "web_search"
     },
     {
       "id": 41,
       "question": "What are the most recent large language model releases announced this month?",
       "ground_truth": "This requires a live web search since new model releases happen continuously and would postdate any static corpus or training cutoff.",
-      "answer": "The most recent large language model releases announced this month include:\n\n- **DeepSeek-V4-Flash-Vision-Exp** released on August 20, 2026.\n- **GLM-5.3** released by Zhipu AI on August 13, 2026.\n- **Qwen3.8-27B** also released by Alibaba Cloud/Qwen Team on August 13, 2026.\n\nThese updates reflect the ongoing development and release of new models in the large language model landscape as tracked by LLM Stats [Source 5].",
+      "answer": "According to the information provided, **12 new AI models** were released in **August 2026** from **7 providers**. The most recent model is **GLM-5.2 Turbo** from **Z.AI**, which was released on **August 17, 2026**. Here is a list of some of the models released this month:\n\n- **GLM-5.2 Turbo** - Z.AI\n- **GLM-5.3** - Z.AI\n- **Gemini 3.7 Flash** - Google\n- **Seed 2.1 Turbo** - ByteDance\n- **Grok Imagine Image 2.0** - xAI\n- **Seedance 2.5** - ByteDance\n- **Grok 4.6** - xAI\n- **Muse Spark 1.2** - Meta\n\nThese models are available on **LLM Gateway** through a single API, and new models are typically added within **48 hours** of their official release by the providers, as noted in the context from [Source 1].",
       "route_decision": "web_search",
       "retrieval_score": 0.0,
       "num_sources": 5,
-      "latency_ms": 4288.6,
+      "latency_ms": 5061.9,
       "context_type": "web_search"
     },
     {
       "id": 42,
       "question": "Who won the most recent Super Bowl?",
       "ground_truth": "This requires a live web search to identify the most recent winner as of today.",
-      "answer": "The most recent Super Bowl, Super Bowl LX, was won by the **Seattle Seahawks**, who defeated the **New England Patriots** with a score of **29-13** on **February 8, 2026** according to [Source 2].",
+      "answer": "The most recent Super Bowl, Super Bowl LX in 2026, was won by the **Seattle Seahawks**, who defeated the **New England Patriots** with a score of **29-13**. This victory marked the Seahawks' second Super Bowl championship, having previously won in 2014 [Source 2].",
       "route_decision": "web_search",
       "retrieval_score": 0.0,
       "num_sources": 5,
-      "latency_ms": 4147.4,
+      "latency_ms": 4885.0,
       "context_type": "web_search"
     },
     {
       "id": 43,
       "question": "What is the current weather in New York City?",
       "ground_truth": "This requires a live web search — weather changes constantly and cannot be answered from static data.",
-      "answer": "The current weather in New York City on August 28, 2026, is as follows:\n\n- **Temperature**: High of **83°F** (approximately **28°C**) and a low of **72°F** (approximately **22°C**).\n- **Conditions**: Thundershowers and overcast.\n- **Wind**: 6 mph.\n- **Humidity**: 60%.\n- **Precipitation Chance**: 41% with an expected rainfall of 0.07 inches.\n\nThis information is based on the forecast for that specific day, August 28, 2026, as detailed in the sources provided.",
+      "answer": "The context does not provide information about the **current weather** in New York City. It includes weather forecasts for **August 28, 2026**, detailing expected temperatures, conditions, and humidity levels, but does not specify the current weather conditions. \n\nThe available information includes:\n- **Forecasted high/low temperatures**: 82°F/70°F according to [Source 2].\n- **Conditions**: Dry with variable clouds and sun, and a 40% chance of showers and thunderstorms later in the day.\n\nUnfortunately, I cannot provide the current weather from the available documents.",
       "route_decision": "web_search",
       "retrieval_score": 0.0,
       "num_sources": 5,
-      "latency_ms": 5761.5,
+      "latency_ms": 4926.2,
       "context_type": "web_search"
     },
     {
       "id": 44,
       "question": "What is the latest stable version of Python?",
       "ground_truth": "This requires a live web search to confirm the current release, since new versions ship periodically.",
-      "answer": "The latest stable version of Python is **Python 3.14.3**, which was released on **February 3, 2026**. This version includes approximately **299 bug fixes, improvements, and documentation changes** since the previous version, 3.14.2. Notable features introduced in Python 3.14 include free-threaded Python support, template string literals (t-strings), deferred evaluation of annotations, multiple interpreters in the standard library, and built-in support for Zstandard compression, as stated in [Source 1].",
+      "answer": "The **latest stable version of Python** is **3.14**, which was released on **October 7, 2025**. This version includes several improvements such as faster startup and import times, memory management optimizations, improved debugging and traceback features, and enhancements for multi-interpreter management in CPython, which improves thread safety for concurrent tasks. \n\nAdditionally, as of **August 14, 2025**, the previous stable version was **3.13.7**, which is also fully supported and safe for everyday use. Python 3.13 introduced features like a just-in-time compiler and clearer error messages with color-highlighted tracebacks, among other updates to the standard library [Source 1][Source 2].",
       "route_decision": "web_search",
       "retrieval_score": 0.0,
       "num_sources": 5,
-      "latency_ms": 4982.9,
+      "latency_ms": 6256.0,
       "context_type": "web_search"
     },
     {
       "id": 45,
       "question": "What are today's top technology news headlines?",
       "ground_truth": "This requires a live web search for current news.",
-      "answer": "The context provides several technology news headlines, including:\n\n- **Tata Consultancy Services, Infosys, Wipro, HCLTech, and Cognizant** are adjusting their business models to tie fees to **performance outcomes** rather than hours worked, as reported by Reuters.\n- **Australia** has passed a law to levy **tech giants** that fail to pay for local news, also covered by Reuters.\n- **Parental control features** in ChatGPT for Teens have been explained by Abhinaya K in The Hindu.\n\nThese are the main headlines mentioned in the provided context. However, there may be additional top technology news not covered in the documents.",
+      "answer": "The context provides limited information on today's top technology news headlines. It mentions several topics, including:\n\n- **Parental control features in ChatGPT for Teens** \n- **Australia passing a law to levy tech giants that fail to pay for local news**\n- **Concerns regarding the destruction of Flock cameras in the U.S.**\n- **IT services sector contracts being reshaped by AI, with a focus on performance outcomes rather than hours worked** \n\nHowever, it does not provide a comprehensive list of all today's top technology news headlines. Therefore, I cannot answer the rest from the available documents.",
       "route_decision": "web_search",
       "retrieval_score": 0.0,
       "num_sources": 5,
-      "latency_ms": 3602.7,
+      "latency_ms": 4369.0,
       "context_type": "web_search"
     },
     {
       "id": 46,
       "question": "What is the current exchange rate between USD and EUR?",
       "ground_truth": "This requires a live web search — exchange rates fluctuate continuously.",
-      "answer": "The current exchange rate between USD and EUR varies slightly across different sources:\n\n- According to **AllRatesToday**, the rate is **1 USD = 0.8634 EUR**.\n- **Xe** reports a mid-market rate of **1 USD = 0.8573 EUR**.\n- **Revolut** states the rate as **1 USD = 0.8546 EUR**.\n- **MoneySwapp** lists the rate as **1 USD = 0.8579 EUR**.\n\nThese rates reflect the mid-market values without bank markups, and they may fluctuate.",
+      "answer": "The current exchange rate between USD and EUR varies across different sources:\n\n- According to **Xe**, the mid-market rate is **1 USD = 0.8573 EUR** as of 11:51 UTC.\n- **Revolut** lists the current rate as **1 USD = 0.8655 EUR**.\n- Another **Revolut** source states **1 USD = 0.8546 EUR**, but mentions additional fees.\n- **OFX** reports the rate as **1 USD = 0.862354 EUR**.\n- **Western Union** shows a rate of **1 USD = 0.8399 EUR**.\n\nThese rates reflect the dynamic nature of currency exchange, and it's advisable to check the specific platform for the most accurate and up-to-date information.",
       "route_decision": "web_search",
       "retrieval_score": 0.0,
       "num_sources": 5,
-      "latency_ms": 3981.0,
+      "latency_ms": 5660.9,
       "context_type": "web_search"
     },
     {
       "id": 47,
       "question": "Who is the current CEO of OpenAI?",
       "ground_truth": "This requires a live web search to confirm current leadership, since executive roles can change.",
-      "answer": "The current CEO of OpenAI is **Sam Altman**. He has been serving in this role since 2019 and has played a significant role in the company's advancements in artificial intelligence, particularly in large language models and natural language processing [Source 1][Source 2].",
+      "answer": "The current CEO of OpenAI is **Sam Altman**. He has been serving in this role since 2019, with a brief removal in November 2023, after which he was reinstated shortly thereafter. Altman is noted for his significant contributions to the tech industry and has played a crucial role in shaping the AI landscape through his leadership at OpenAI and previous positions, including his time as president at Y Combinator and co-founder of Loopt. According to [Source 1], he continues to lead OpenAI as its CEO.",
       "route_decision": "web_search",
       "retrieval_score": 0.0,
       "num_sources": 5,
-      "latency_ms": 4612.5,
+      "latency_ms": 4267.7,
       "context_type": "web_search"
     },
     {
       "id": 48,
       "question": "What is the current price of Bitcoin?",
       "ground_truth": "This requires a live web search — cryptocurrency prices change continuously.",
-      "answer": "The current price of Bitcoin (BTC) varies slightly across different sources:\n\n- According to [Source 1], the price is **$77,050.04**.\n- According to [Source 2], the price is **$79,877.64**.\n- According to [Source 4], the price is **$79,972.30**.\n- According to [Source 5], the price is **$78,792.43**.\n\nThe context provides multiple prices from different sources, indicating some fluctuation in Bitcoin's value.",
+      "answer": "The **current price of Bitcoin (BTC)** is **$78,065.09** according to [Source 1]. Additionally, other sources report slightly different prices, such as **$78,792.43** from [Source 5] and **$79,972.30** from [Source 4]. \n\nThe price can vary slightly depending on the source and the time of the update, but the most consistent figure from the provided context is **$78,065.09**.",
       "route_decision": "web_search",
       "retrieval_score": 0.0,
       "num_sources": 5,
-      "latency_ms": 6285.2,
+      "latency_ms": 4288.3,
       "context_type": "web_search"
     },
     {
       "id": 49,
       "question": "What major AI conferences are scheduled for later this year?",
       "ground_truth": "This requires a live web search for current conference schedules.",
-      "answer": "The context provides information about several major AI conferences scheduled for 2026. Here are the notable ones:\n\n- **India AI Impact Summit**\n  - **Dates**: February 15 to 20, 2026\n  - **Location**: New Delhi, India\n  - **Focus**: Government-led, focusing on global AI policy and inclusive development.\n\n- **NVIDIA GTC**\n  - **Dates**: March 16 to 19, 2026\n  - **Location**: San Jose, CA, USA\n  - **Focus**: Infrastructure event for developers, researchers, and business leaders.\n\n- **HumanX**\n  - **Dates**: April 6 to 9, 2026\n  - **Location**: San Francisco, CA, USA\n  - **Focus**: Strategy, safety, and regulation in AI for executives.\n\n- **RADAR: Hybrid Human-AI Teams**\n  - **Dates**: April 1, 2026\n  - **Location**: Online\n  - **Focus**: Hybrid human-AI teams and practical AI integration strategies.\n\nThese conferences cover a range of topics and are designed for various audiences, from government officials to industry leaders and developers. The context does not provide information on any other conferences scheduled for later this year beyond these four.",
+      "answer": "The context provides information about several major AI conferences scheduled for 2026. Here are some of the notable events:\n\n- **Radar: Hybrid Human-AI Teams**\n  - **Date:** April 1, 2026\n  - **Location:** Online\n  - **Cost:** Free\n  - **Focus:** Exploring the collaborative synergy between human expertise and AI.\n\n- **The AI Conference SF**\n  - **Date:** September 30 - October 1, 2026\n  - **Location:** San Francisco, California, US\n  - **Cost:** From $199\n  - **Focus:** Applied AI startups, neural architectures, foundational models, and networking.\n\n- **SuperAI**\n  - **Date:** June 10-11, 2026\n  - **Location:** Marina Bay Sands, Singapore\n  - **Cost:** $299-$999\n  - **Focus:** AI conference in Asia with a diverse audience, including C-level executives.\n\n- **Data + AI Summit**\n  - **Date:** June 15-18, 2026\n  - **Location:** San Francisco, USA\n  - **Focus:** Data engineering, machine learning, and AI strategies.\n\n- **HumanX**\n  - **Date:** April 6-9, 2026\n  - **Location:** San Francisco, CA, US\n  - **Cost:** $2,650-$3,995\n  - **Focus:** Bridging research, product strategy, and business deployment.\n\n- **AI World Congress 2026**\n  - **Date:** Not specified in the context.\n  - **Focus:** AI and robotics innovation for senior-level decision-makers.\n\nThe context does not provide specific details about other conferences later in the year beyond those mentioned.",
       "route_decision": "web_search",
       "retrieval_score": 0.0,
       "num_sources": 5,
-      "latency_ms": 5589.8,
+      "latency_ms": 5783.3,
       "context_type": "web_search"
     },
     {
       "id": 50,
       "question": "What is the most recent version of the GPT model family released by OpenAI?",
       "ground_truth": "This requires a live web search since new model versions are released over time and would postdate a static corpus.",
-      "answer": "The most recent version of the GPT model family released by OpenAI is **GPT-5.6**, which was publicly launched on **July 9, 2026**. This model comes in three variants: **Sol**, **Terra**, and **Luna**. According to the context, GPT-5.6 is noted for its advanced capabilities in various fields, including enterprise work, coding, and scientific research, and is considered one of the most powerful AI models available right now. It follows the previous version, GPT-5.5, which was released less than three months prior to GPT-5.6 [Source 1][Source 2][Source 3].",
+      "answer": "The most recent version of the GPT model family released by OpenAI is **GPT-5.6 Sol**. It was released less than three months after GPT-5.5 and is noted as the most advanced version of OpenAI's flagship reasoning model, excelling in benchmark performance and accuracy for complex workflows. This model is part of the ongoing series of frequent point-releases by OpenAI in the GPT 5.X family, which has seen rapid updates in recent months according to the information provided in the context [Source 1].",
       "route_decision": "web_search",
       "retrieval_score": 0.0,
       "num_sources": 5,
-      "latency_ms": 6039.2,
+      "latency_ms": 3850.6,
       "context_type": "web_search"
     }
   ]
