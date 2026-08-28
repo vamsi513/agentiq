@@ -86,11 +86,7 @@ def build_graph(checkpointer: MemorySaver | None = None):
     graph.add_edge("generator", END)
 
     # ── Compile ───────────────────────────────────────────────────────────────
-    compile_kwargs = {}
-    if checkpointer is not None:
-        compile_kwargs["checkpointer"] = checkpointer
-
-    compiled = graph.compile(**compile_kwargs)
+    compiled = graph.compile(checkpointer=checkpointer)
     logger.info(
         "AgentIQ graph compiled (checkpointer=%s)",
         type(checkpointer).__name__ if checkpointer else "None",
