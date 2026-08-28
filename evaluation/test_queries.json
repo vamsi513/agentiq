@@ -8,7 +8,7 @@
   {
     "id": 2,
     "question": "How does multi-head self-attention work in Transformers?",
-    "ground_truth": "Multi-head self-attention computes three projections — Query, Key, and Value — for each token and uses scaled dot-product attention to produce context-aware representations. Running multiple attention heads in parallel allows the model to attend to information from different representation subspaces simultaneously.",
+    "ground_truth": "Multi-head self-attention computes three projections \u2014 Query, Key, and Value \u2014 for each token and uses scaled dot-product attention to produce context-aware representations. Running multiple attention heads in parallel allows the model to attend to information from different representation subspaces simultaneously.",
     "context_type": "retrieval"
   },
   {
@@ -151,152 +151,152 @@
   },
   {
     "id": 26,
-    "question": "What is Python used for in data science?",
-    "ground_truth": "Python is widely used in data science for data manipulation with pandas, numerical computing with NumPy, machine learning with scikit-learn and PyTorch, data visualization with matplotlib and seaborn, and building end-to-end ML pipelines. Its readable syntax and rich ecosystem make it the dominant language in the field.",
+    "question": "Hello, how are you today?",
+    "ground_truth": "A friendly conversational greeting; no factual content to verify.",
     "context_type": "direct"
   },
   {
     "id": 27,
-    "question": "What is the difference between supervised and unsupervised learning?",
-    "ground_truth": "Supervised learning trains on labeled data where the correct output is known, learning to map inputs to outputs. Unsupervised learning finds patterns in unlabeled data without predefined outputs, used for clustering, dimensionality reduction, and anomaly detection.",
+    "question": "What is your name and what can you help me with?",
+    "ground_truth": "The assistant should introduce itself as AgentIQ, a research assistant that routes questions to retrieval, web search, or direct answering.",
     "context_type": "direct"
   },
   {
     "id": 28,
-    "question": "What is gradient descent and how does it train neural networks?",
-    "ground_truth": "Gradient descent minimizes the loss function by iteratively adjusting parameters in the direction of the negative gradient. In neural networks, backpropagation computes the gradient of the loss with respect to each parameter using the chain rule, and gradient descent updates the weights to reduce prediction error.",
+    "question": "Thank you for your help!",
+    "ground_truth": "A conversational acknowledgment; no factual content to verify.",
     "context_type": "direct"
   },
   {
     "id": 29,
-    "question": "What is overfitting in machine learning and how can it be prevented?",
-    "ground_truth": "Overfitting occurs when a model learns the training data too well, including noise and random fluctuations, and fails to generalize to new data. Prevention techniques include regularization (L1/L2), dropout, early stopping, cross-validation, data augmentation, and reducing model complexity.",
+    "question": "What is the capital of France?",
+    "ground_truth": "The capital of France is Paris.",
     "context_type": "direct"
   },
   {
     "id": 30,
-    "question": "What is the purpose of the softmax function in neural networks?",
-    "ground_truth": "Softmax converts a vector of raw scores (logits) into a probability distribution where all values sum to 1. It is typically used in the output layer of classification networks to produce class probabilities, and in attention mechanisms to produce attention weights.",
+    "question": "What is 15 multiplied by 8?",
+    "ground_truth": "15 multiplied by 8 is 120.",
     "context_type": "direct"
   },
   {
     "id": 31,
-    "question": "What is transfer learning and why is it important?",
-    "ground_truth": "Transfer learning reuses a model trained on one task as the starting point for a model on a different but related task. It is important because it dramatically reduces the amount of labeled data and compute needed to achieve good performance, especially in NLP where large pre-trained models like BERT and GPT are fine-tuned on downstream tasks.",
+    "question": "Who wrote the play Romeo and Juliet?",
+    "ground_truth": "Romeo and Juliet was written by William Shakespeare.",
     "context_type": "direct"
   },
   {
     "id": 32,
-    "question": "What is the vanishing gradient problem in deep neural networks?",
-    "ground_truth": "The vanishing gradient problem occurs when gradients become extremely small as they propagate through many layers during backpropagation, making it hard to train early layers. Solutions include ReLU activations, batch normalization, residual connections (ResNets), and LSTM/GRU gates in recurrent networks.",
+    "question": "What is the chemical symbol for gold?",
+    "ground_truth": "The chemical symbol for gold is Au.",
     "context_type": "direct"
   },
   {
     "id": 33,
-    "question": "Explain the difference between precision and recall in classification.",
-    "ground_truth": "Precision is the fraction of predicted positives that are actually positive (TP / (TP + FP)). Recall is the fraction of actual positives that were correctly predicted (TP / (TP + FN)). There is usually a trade-off: increasing one often decreases the other. F1-score is the harmonic mean balancing both.",
+    "question": "How many continents are there on Earth?",
+    "ground_truth": "There are seven continents: Africa, Antarctica, Asia, Australia, Europe, North America, and South America.",
     "context_type": "direct"
   },
   {
     "id": 34,
-    "question": "What is the attention mechanism and how does it relate to memory in neural networks?",
-    "ground_truth": "Attention allows a model to focus on relevant parts of the input when producing each output, acting as a soft differentiable memory lookup. The model learns to compute attention weights over all input positions and takes a weighted sum of their values, enabling it to selectively access information regardless of sequence length.",
+    "question": "What is the boiling point of water in Celsius at sea level?",
+    "ground_truth": "Water boils at 100 degrees Celsius at sea level (standard atmospheric pressure).",
     "context_type": "direct"
   },
   {
     "id": 35,
-    "question": "What is the difference between bagging and boosting ensemble methods?",
-    "ground_truth": "Bagging (Bootstrap Aggregating) trains multiple models independently on random subsets of data and averages their predictions, reducing variance. Boosting trains models sequentially where each model focuses on correcting the errors of the previous, reducing bias. Random Forest uses bagging; XGBoost and AdaBoost use boosting.",
+    "question": "What year did World War II end?",
+    "ground_truth": "World War II ended in 1945.",
     "context_type": "direct"
   },
   {
     "id": 36,
-    "question": "What is tokenization in NLP and what are common approaches?",
-    "ground_truth": "Tokenization splits text into units (tokens) that the model processes. Common approaches include word-level tokenization, character-level tokenization, and subword tokenization like Byte-Pair Encoding (BPE) used by GPT and WordPiece used by BERT. Subword methods balance vocabulary size with handling of rare and unseen words.",
+    "question": "What is the largest planet in our solar system?",
+    "ground_truth": "Jupiter is the largest planet in our solar system.",
     "context_type": "direct"
   },
   {
     "id": 37,
-    "question": "What is the difference between a generative and a discriminative model?",
-    "ground_truth": "Discriminative models learn the boundary between classes directly, modeling P(y|x). Generative models learn the joint distribution P(x,y) and can generate new data samples. Examples: logistic regression and SVMs are discriminative; GANs, VAEs, and language models are generative.",
+    "question": "What is the freezing point of water in Fahrenheit?",
+    "ground_truth": "Water freezes at 32 degrees Fahrenheit.",
     "context_type": "direct"
   },
   {
     "id": 38,
-    "question": "What is layer normalization and how does it differ from batch normalization?",
-    "ground_truth": "Layer normalization normalizes across the feature dimension for each individual sample, making it independent of batch size. Batch normalization normalizes across the batch dimension. Layer normalization is preferred in Transformers because it works well with variable-length sequences and is more stable in small-batch settings.",
+    "question": "Can you tell me a fun fact about the Moon?",
+    "ground_truth": "A commonly cited fun fact: the Moon is slowly drifting away from Earth at about 3.8 cm per year.",
     "context_type": "direct"
   },
   {
     "id": 39,
-    "question": "What is a knowledge graph and how is it used in AI?",
-    "ground_truth": "A knowledge graph is a structured representation of entities and the relationships between them, stored as triples (subject, predicate, object). In AI it is used for question answering, semantic search, recommendation systems, and as an external knowledge source for LLMs to improve factual accuracy.",
-    "context_type": "direct"
+    "question": "What is the current stock price of Apple (AAPL)?",
+    "ground_truth": "This requires a live web search \u2014 stock prices change continuously and cannot be answered from static training data or the local document corpus.",
+    "context_type": "web_search"
   },
   {
     "id": 40,
-    "question": "What is the difference between zero-shot, one-shot, and few-shot learning?",
-    "ground_truth": "Zero-shot learning asks the model to perform a task with no examples, relying on instruction following. One-shot provides exactly one example. Few-shot provides a small number of examples (typically 2-10) in the prompt. GPT-3 demonstrated strong few-shot learning by completing tasks from in-context examples without weight updates.",
-    "context_type": "direct"
+    "question": "What is today's date?",
+    "ground_truth": "This requires live/current information, not static training data.",
+    "context_type": "web_search"
   },
   {
     "id": 41,
-    "question": "What is cosine similarity and when is it used in NLP?",
-    "ground_truth": "Cosine similarity measures the cosine of the angle between two vectors, equal to their dot product divided by the product of their magnitudes. It ranges from -1 to 1, where 1 means identical direction. In NLP it is used to measure semantic similarity between sentence embeddings, and in vector databases for nearest-neighbor retrieval.",
-    "context_type": "direct"
+    "question": "What are the most recent large language model releases announced this month?",
+    "ground_truth": "This requires a live web search since new model releases happen continuously and would postdate any static corpus or training cutoff.",
+    "context_type": "web_search"
   },
   {
     "id": 42,
-    "question": "What is the purpose of dropout regularization?",
-    "ground_truth": "Dropout randomly sets a fraction of neuron outputs to zero during training, forcing the network to learn redundant representations and preventing co-adaptation of neurons. This reduces overfitting and acts as an implicit ensemble of exponentially many network architectures.",
-    "context_type": "direct"
+    "question": "Who won the most recent Super Bowl?",
+    "ground_truth": "This requires a live web search to identify the most recent winner as of today.",
+    "context_type": "web_search"
   },
   {
     "id": 43,
-    "question": "What is semantic search and how does it differ from keyword search?",
-    "ground_truth": "Semantic search retrieves documents based on the meaning and intent of the query rather than exact keyword matches. It encodes both query and documents into dense vector embeddings and retrieves those with highest cosine similarity. Keyword search uses term frequency and inverted indexes, missing synonyms and paraphrases that semantic search handles naturally.",
-    "context_type": "direct"
+    "question": "What is the current weather in New York City?",
+    "ground_truth": "This requires a live web search \u2014 weather changes constantly and cannot be answered from static data.",
+    "context_type": "web_search"
   },
   {
     "id": 44,
-    "question": "What is the purpose of residual connections in deep networks?",
-    "ground_truth": "Residual connections (skip connections) add the input of a layer directly to its output, creating a shortcut path for gradients. They solve the vanishing gradient problem in very deep networks by allowing gradients to flow directly through the skip path. Introduced in ResNet, they are also used in every Transformer layer.",
-    "context_type": "direct"
+    "question": "What is the latest stable version of Python?",
+    "ground_truth": "This requires a live web search to confirm the current release, since new versions ship periodically.",
+    "context_type": "web_search"
   },
   {
     "id": 45,
-    "question": "What is prompt engineering and why does it matter?",
-    "ground_truth": "Prompt engineering is the practice of carefully designing input prompts to elicit desired outputs from LLMs without changing model weights. It matters because LLM performance varies dramatically with prompt phrasing. Techniques include few-shot examples, chain-of-thought instructions, role-playing system prompts, and structured output formatting.",
-    "context_type": "direct"
+    "question": "What are today's top technology news headlines?",
+    "ground_truth": "This requires a live web search for current news.",
+    "context_type": "web_search"
   },
   {
     "id": 46,
-    "question": "What is the difference between encoder-only, decoder-only, and encoder-decoder Transformer models?",
-    "ground_truth": "Encoder-only models (BERT) process the full input bidirectionally and are best for classification and extraction tasks. Decoder-only models (GPT) generate text autoregressively left-to-right and excel at generation. Encoder-decoder models (T5, BART) encode the input then decode the output, suited for seq2seq tasks like translation and summarization.",
-    "context_type": "direct"
+    "question": "What is the current exchange rate between USD and EUR?",
+    "ground_truth": "This requires a live web search \u2014 exchange rates fluctuate continuously.",
+    "context_type": "web_search"
   },
   {
     "id": 47,
-    "question": "What is vector quantization in the context of machine learning?",
-    "ground_truth": "Vector quantization maps continuous vectors to a finite set of discrete codebook vectors (centroids). It is used in FAISS IVFPQ indices for compression, in VQ-VAE for discrete latent representations, and in audio codecs. It reduces memory and speeds up similarity search at the cost of some precision.",
-    "context_type": "direct"
+    "question": "Who is the current CEO of OpenAI?",
+    "ground_truth": "This requires a live web search to confirm current leadership, since executive roles can change.",
+    "context_type": "web_search"
   },
   {
     "id": 48,
-    "question": "What is the role of the feed-forward network in a Transformer layer?",
-    "ground_truth": "Each Transformer layer has a position-wise feed-forward network (FFN) applied identically to each position after the attention sublayer. It consists of two linear transformations with a ReLU or GELU activation in between. The FFN is thought to store factual knowledge learned during pre-training and has a larger hidden dimension (typically 4x the model dimension).",
-    "context_type": "direct"
+    "question": "What is the current price of Bitcoin?",
+    "ground_truth": "This requires a live web search \u2014 cryptocurrency prices change continuously.",
+    "context_type": "web_search"
   },
   {
     "id": 49,
-    "question": "What is hallucination in LLMs and how can RAG help reduce it?",
-    "ground_truth": "Hallucination is when an LLM generates confident but factually incorrect information. RAG reduces hallucination by grounding the model's output in retrieved documents, providing factual context the model must use when generating its answer. Requiring the model to cite sources makes hallucinated facts easier to detect.",
-    "context_type": "direct"
+    "question": "What major AI conferences are scheduled for later this year?",
+    "ground_truth": "This requires a live web search for current conference schedules.",
+    "context_type": "web_search"
   },
   {
     "id": 50,
-    "question": "What is the difference between fine-tuning and in-context learning?",
-    "ground_truth": "Fine-tuning updates the model's weights on task-specific labeled data, permanently changing the model. In-context learning (few-shot prompting) provides examples in the prompt at inference time without changing weights, relying on the model's pre-trained ability to generalize from examples. Fine-tuning typically achieves higher performance; in-context learning is faster and requires no training data.",
-    "context_type": "direct"
+    "question": "What is the most recent version of the GPT model family released by OpenAI?",
+    "ground_truth": "This requires a live web search since new model versions are released over time and would postdate a static corpus.",
+    "context_type": "web_search"
   }
 ]
