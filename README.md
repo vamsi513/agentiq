@@ -253,9 +253,9 @@ Evaluated on 50 test queries spanning all three routing paths — retrieval, dir
 | Queries Evaluated | **50** |
 | Avg Latency | **3091ms** |
 
-### Router accuracy: 50/50 (100%)
+### Router accuracy: 50/50 (100%) on the current dev set
 
-Each query carries a ground-truth expected route (verified against the live router before being added to the test set). `evaluation/eval_runner.py` compares the router's actual `route_decision` against that label per query and reports a full confusion matrix — not just an aggregate route count, which can look correct even when individual queries are misrouted if two errors happen to cancel out in the totals.
+`evaluation/eval_runner.py` compares the router's actual `route_decision` against a ground-truth label per query and reports a full confusion matrix — not just an aggregate route count, which can look correct even when individual queries are misrouted if two errors happen to cancel out in the totals.
 
 | Expected route | Correct | Total | Accuracy |
 |---|---|---|---|
@@ -264,6 +264,8 @@ Each query carries a ground-truth expected route (verified against the live rout
 | Web Search | 12 | 12 | 100% |
 
 Zero misrouted queries on the last real run against production (`evaluation/evaluation_results.json`, committed automatically by the RAGAS Evaluation workflow).
+
+**A caveat on methodology.** Labels were derived from the router's own classification criteria (ML/AI topics → retrieval, time-sensitive queries → web_search, conversational/general-knowledge → direct — see the system prompt in `agent/nodes.py`), then each query was checked against the live router before being committed to the set. That check-before-commit step means this 100% is agreement with a dev set built alongside the router, not performance against an independently frozen holdout — a genuinely adversarial or ambiguous query is more likely to expose real routing failures than this set can. Treat this as "the router correctly implements its own documented classification rules on 50 representative queries," not as a general reliability guarantee.
 
 ```bash
 python -m evaluation.eval_runner
