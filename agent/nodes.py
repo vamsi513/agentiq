@@ -15,7 +15,9 @@ Nodes:
     generator_node   — Final answer synthesis with citations
 """
 
+import functools
 import logging
+import time
 from typing import Any
 
 from langchain_core.messages import AIMessage, HumanMessage
@@ -25,6 +27,27 @@ from agent.state import AgentState
 from config import settings
 
 logger = logging.getLogger(__name__)
+
+
+def _timed(stage: str):
+    """Log wall-clock duration for a pipeline stage, independent of which
+    return path the wrapped node takes (including its own caught-exception
+    paths). Grep production logs for 'stage_timing' to derive per-stage
+    p50/p95 without adding a tracing dependency."""
+
+    def decorator(fn):
+        @functools.wraps(fn)
+        def wrapper(*args, **kwargs):
+            start = time.perf_counter()
+            try:
+                return fn(*args, **kwargs)
+            finally:
+                duration_ms = (time.perf_counter() - start) * 1000
+                logger.info("stage_timing stage=%s duration_ms=%.1f", stage, duration_ms)
+
+        return wrapper
+
+    return decorator
 
 
 # ── LLM singleton ─────────────────────────────────────────────────────────────
@@ -65,6 +88,7 @@ Respond with EXACTLY one word: retrieval, web_search, or direct.
 No explanation. No punctuation. Just the single routing word."""
 
 
+@_timed("router")
 def router_node(state: AgentState) -> dict[str, Any]:
     """
     Classify the user query and set the routing decision.
@@ -145,6 +169,7 @@ def _rewrite_query(query: str) -> list[str]:
 
 # ── Retriever node ────────────────────────────────────────────────────────────
 
+@_timed("retriever")
 def retriever_node(state: AgentState) -> dict[str, Any]:
     """
     Query the FAISS vector store and populate context + sources.
@@ -221,6 +246,7 @@ def retriever_node(state: AgentState) -> dict[str, Any]:
 
 # ── Web search node ───────────────────────────────────────────────────────────
 
+@_timed("web_search")
 def web_search_node(state: AgentState) -> dict[str, Any]:
     """
     Perform a live web search via Tavily and populate context + sources.
@@ -284,6 +310,7 @@ For greetings, respond warmly. For general knowledge questions, answer from
 your training knowledge. Keep answers concise and clear."""
 
 
+@_timed("direct")
 def direct_node(state: AgentState) -> dict[str, Any]:
     """Answer conversational and general-knowledge queries directly without retrieval."""
     query = state.get("query", "")
@@ -339,6 +366,7 @@ Guidelines:
 - Keep answers focused — 2–4 paragraphs unless the question demands more detail."""
 
 
+@_timed("generator")
 def generator_node(state: AgentState) -> dict[str, Any]:
     """
     Synthesise the final answer from context and conversation history.

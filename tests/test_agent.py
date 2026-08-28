@@ -444,3 +444,53 @@ class TestDirectNode:
         assert "messages" in result
         assert "error" in result
         assert "error" in result["messages"][0].content.lower() or "encountered" in result["messages"][0].content.lower()
+
+
+class TestStageTiming:
+    """_timed logs a stage_timing line regardless of which return path (or
+    exception) the wrapped node takes -- this is what lets p50/p95 be derived
+    from production logs without a tracing dependency."""
+
+    def test_logs_duration_on_normal_return(self, caplog):
+        from agent.nodes import _timed
+
+        @_timed("fake_stage")
+        def fake_node(state):
+            return {"ok": True}
+
+        with caplog.at_level("INFO", logger="agent.nodes"):
+            result = fake_node({})
+
+        assert result == {"ok": True}
+        assert any(
+            "stage_timing stage=fake_stage" in r.message for r in caplog.records
+        )
+
+    def test_logs_duration_even_when_wrapped_fn_raises(self, caplog):
+        from agent.nodes import _timed
+
+        @_timed("fake_stage")
+        def fake_node(state):
+            raise RuntimeError("boom")
+
+        with caplog.at_level("INFO", logger="agent.nodes"):
+            with pytest.raises(RuntimeError):
+                fake_node({})
+
+        assert any(
+            "stage_timing stage=fake_stage" in r.message for r in caplog.records
+        )
+
+    def test_real_nodes_emit_stage_timing(self, caplog):
+        """Spot-check that the decorator is actually applied to a real node,
+        not just demonstrated on a throwaway function above."""
+        from agent.nodes import router_node
+
+        mock_llm = MagicMock()
+        mock_llm.invoke.return_value = AIMessage(content="direct")
+
+        with patch("agent.nodes._get_llm", return_value=mock_llm):
+            with caplog.at_level("INFO", logger="agent.nodes"):
+                router_node(_base_state(messages=[HumanMessage(content="hi")]))
+
+        assert any("stage_timing stage=router" in r.message for r in caplog.records)
