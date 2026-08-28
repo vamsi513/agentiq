@@ -91,6 +91,17 @@ jobs:
             for attempt in $(seq 1 12); do
               if curl --fail --silent http://localhost:8000/health; then
                 echo "Health check passed on attempt $attempt"
+                # `docker image prune -f` only removes dangling images, but every
+                # deploy tags a new image by commit SHA, so old deploys are never
+                # dangling and pile up until the disk fills. Explicitly drop every
+                # tagged agentiq-api image except the one just deployed and the
+                # one it replaced (kept for rollback).
+                KEEP_IMAGE="agentiq-api:${{ github.sha }}"
+                sudo docker images agentiq-api --format '{{.Repository}}:{{.Tag}}' | while read -r img; do
+                  if [ "$img" != "$KEEP_IMAGE" ] && [ "$img" != "$OLD_IMAGE" ]; then
+                    sudo docker rmi "$img" || true
+                  fi
+                done
                 sudo docker image prune -f
                 exit 0
               fi
