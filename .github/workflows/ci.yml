@@ -73,8 +73,11 @@ jobs:
             # Save running image for rollback
             OLD_IMAGE=$(sudo docker inspect agentiq-api --format='{{.Config.Image}}' 2>/dev/null || echo "")
 
-            # Deploy exact tested commit
+            # Deploy exact tested commit. Reset first — the RAGAS eval workflow
+            # runs on this same box and writes evaluation_results.json locally;
+            # a dirty tree would otherwise block this checkout.
             git fetch origin
+            git reset --hard HEAD
             git checkout --detach ${{ github.sha }}
 
             sudo docker build -t agentiq-api:${{ github.sha }} .

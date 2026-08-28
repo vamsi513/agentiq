@@ -30,8 +30,11 @@ jobs:
             set -e
             cd /home/ec2-user/agentiq
 
-            # Pull latest eval code
+            # Start from a clean tree — a previous eval run left evaluation_results.json
+            # modified and uncommitted, which broke the next deploy's git checkout on
+            # this same box. Reset first so this run (and the deploy after it) starts clean.
             git fetch origin master
+            git reset --hard origin/master
             git checkout origin/master -- evaluation/ agent/ api/ retrieval/ tools/ config.py requirements.txt Dockerfile
 
             # Build the same image production deploys from, so eval runs
@@ -63,6 +66,22 @@ jobs:
             > evaluation/evaluation_results.json
           rm -f ~/.ssh/eval_key
           python3 -c "import json; json.load(open('evaluation/evaluation_results.json'))"
+
+      - name: Reset EC2 working tree
+        if: always()
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+        run: |
+          # The results file is now safely captured above — leave the EC2 box's
+          # working tree clean so the deploy workflow's checkout isn't blocked,
+          # even if an earlier step in this run failed.
+          mkdir -p ~/.ssh
+          echo "$EC2_SSH_KEY" > ~/.ssh/eval_key
+          chmod 600 ~/.ssh/eval_key
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/eval_key ec2-user@"$EC2_HOST" \
+            'cd /home/ec2-user/agentiq && git fetch origin master && git reset --hard origin/master'
+          rm -f ~/.ssh/eval_key
 
       - name: Commit results
         run: |
