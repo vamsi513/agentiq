@@ -12,7 +12,7 @@
 
 ## Live Demo
 
-**[AgentIQ (Next.js)](https://agentiq-platform.vercel.app)** — streaming chat UI, calls the FastAPI backend directly
+**[AgentIQ (Next.js)](https://agentiq-platform.vercel.app)** — streaming chat UI; the browser never talks to the FastAPI backend directly, it calls Next.js server-side API routes (`frontend/app/api/chat/`) which proxy to it
 
 **[AgentIQ on Streamlit Cloud](https://agentiq-qgjmzy665qcpysoctz7app.streamlit.app)** — original UI, also supports PDF upload
 
@@ -35,33 +35,33 @@
 ## Architecture
 
 ```
-                        ┌─────────────────────────────────────┐
-                        │           User Query                 │
-                        └──────────────┬──────────────────────┘
-                                       │
-                        ┌──────────────▼──────────────────────┐
-                        │         Router Node                  │
-                        │   (LLM classifies query intent)      │
-                        └──────┬───────────────┬──────────────┘
-                               │               │              │
-              ┌────────────────▼──┐   ┌────────▼────────┐  ┌─▼──────────────┐
-              │  FAISS            │   │  Tavily Web     │  │  Direct LLM    │
-              │  (local corpus)   │   │  Search         │  │  (GPT-4o-mini) │
-              └────────────────┬──┘   └────────┬────────┘  └─┬──────────────┘
-                               │               │              │
-                        ┌──────▼───────────────▼──────────────▼──────┐
-                        │              Generator Node                  │
-                        │   (synthesises context → cited answer)       │
-                        └──────────────────┬──────────────────────────┘
-                                           │
-                        ┌──────────────────▼──────────────────────────┐
-                        │         Streamed Response + Citations        │
-                        │         (via FastAPI SSE / Streamlit)        │
-                        └─────────────────────────────────────────────┘
-
-  Memory: MemorySaver checkpoints every turn → full multi-turn history per session
-  Observability: LangSmith traces every graph run end-to-end
+                              User Query
+                                  │
+                                  ▼
+                             Router Node
+                      (LLM classifies query intent)
+                     ┌────────────┼─────────────┐
+                     ▼            ▼              ▼
+                  FAISS       Tavily Web     Direct Node
+              (local corpus)    Search       (GPT-4o-mini)
+                     │            │               │
+                     └─────┬──────┘               │
+                           ▼                       │
+                    Generator Node                 │
+           (synthesises context → cited answer)    │
+                           │                        │
+                           └───────────┬────────────┘
+                                       ▼
+                      Streamed Response + Citations
+                        (via FastAPI SSE / Streamlit)
 ```
+
+Direct route answers from the LLM's own knowledge and goes straight to the
+response — it does not pass through the Generator Node (no retrieval context
+exists to synthesise for conversational/general-knowledge queries).
+
+- **Memory:** MemorySaver checkpoints every turn → full multi-turn history per session
+- **Observability:** LangSmith traces every graph run end-to-end (when `LANGCHAIN_API_KEY` is configured)
 
 ---
 
@@ -71,9 +71,9 @@
 - **FAISS retrieval** — the only backend the live agent queries, with L2-normalized embeddings for cosine similarity. `retrieval/pinecone_store.py` and `retrieval/llamaindex_loader.py` are standalone reference implementations of alternative backends — neither is wired into `agent/nodes.py`, so switching to them today would mean calling their functions directly rather than flipping a config flag
 - **In-process session memory** with LangGraph MemorySaver checkpointing across all turns in a session (process-local; not persisted across restarts)
 - **Real-time streaming responses** via FastAPI Server-Sent Events (SSE) with token-level output
-- **LangSmith observability** — every graph run is traced end-to-end with inputs, outputs, latency, and token usage
+- **LangSmith observability** — every graph run is traced end-to-end with inputs, outputs, latency, and token usage, when `LANGCHAIN_API_KEY` is configured (not required to run the app)
 - **RAGAS evaluation** — answer relevance **0.73**, faithfulness **0.69** across 50 queries spanning retrieval, direct-answer, and web search routes
-- **PDF upload** — users can upload their own PDFs; text is extracted, chunked, and indexed into FAISS at runtime
+- **PDF upload** (Streamlit app only, not the public Next.js demo) — users can upload their own PDFs; text is extracted, chunked, and indexed into FAISS at runtime
 - **LoRA fine-tuning notebook** — `notebooks/finetune_lora.ipynb` demonstrates full PEFT/LoRA fine-tuning on a custom Q&A dataset
 - **Kubernetes manifests** — `k8s/` directory contains Deployment, Service/Ingress, and HPA manifests as a deployment reference
 - **API rate limiting** — 30 requests/minute per IP enforced at the FastAPI layer; trusted-proxy-aware `X-Forwarded-For` handling for deployments behind nginx. In-process only — correct for the current single-instance deployment, but would need a shared store (Redis, etc.) to mean anything across multiple replicas
@@ -196,7 +196,7 @@ LOG_LEVEL=INFO
 ```
 agentiq/
 ├── app.py                          # Streamlit frontend entry point
-├── frontend/                       # Next.js chat UI (calls the FastAPI backend directly)
+├── frontend/                       # Next.js chat UI (proxies to the FastAPI backend via server-side API routes)
 │   ├── app/page.tsx                # Chat interface — streaming, route badges, sources
 │   ├── app/pipeline/page.tsx       # Architecture explainer page
 │   └── app/api/chat/               # Server-side proxy routes (chat, chat/stream)
