@@ -1,9 +1,11 @@
 """
 retrieval/llamaindex_loader.py — LlamaIndex document indexing and retrieval.
 
-Provides an alternative retrieval path using LlamaIndex VectorStoreIndex
-alongside the existing FAISS pipeline. Documents are loaded, chunked, and
-indexed using LlamaIndex's built-in node parser and embedding pipeline.
+Standalone reference implementation of an alternative retrieval path using
+LlamaIndex VectorStoreIndex. Documents are loaded, chunked, and indexed
+using LlamaIndex's built-in node parser and embedding pipeline. NOT wired
+into agent/nodes.py — retriever_node always calls vectorstore.py's FAISS
+implementation; nothing in the live agent calls this module.
 """
 
 import logging

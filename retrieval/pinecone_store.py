@@ -1,9 +1,11 @@
 """
 retrieval/pinecone_store.py — Pinecone vector store as alternative to FAISS.
 
-Provides the same interface as vectorstore.py so the agent layer can swap
-between FAISS (local / offline) and Pinecone (cloud / scalable) by setting
-VECTOR_BACKEND=pinecone in the .env file.
+Provides the same interface as vectorstore.py as a reference implementation
+of a cloud-backed alternative to FAISS (local / offline). NOT wired into
+agent/nodes.py — retriever_node always calls vectorstore.query_vectorstore.
+There is no VECTOR_BACKEND switch; using this module means calling its
+functions directly instead of the ones in vectorstore.py.
 
 Requires:
     PINECONE_API_KEY  — Pinecone project API key

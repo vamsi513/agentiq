@@ -37,9 +37,8 @@
                         └──────┬───────────────┬──────────────┘
                                │               │              │
               ┌────────────────▼──┐   ┌────────▼────────┐  ┌─▼──────────────┐
-              │  FAISS / Pinecone │   │  Tavily Web     │  │  Direct LLM    │
-              │  + LlamaIndex     │   │  Search         │  │  (GPT-4o-mini) │
-              │  (local corpus)   │   │  (live results) │  │                │
+              │  FAISS            │   │  Tavily Web     │  │  Direct LLM    │
+              │  (local corpus)   │   │  Search         │  │  (GPT-4o-mini) │
               └────────────────┬──┘   └────────┬────────┘  └─┬──────────────┘
                                │               │              │
                         ┌──────▼───────────────▼──────────────▼──────┐
@@ -61,7 +60,7 @@
 ## Features
 
 - **Multi-step agentic reasoning** with LangGraph StateGraph — router, retriever, web search, and generator nodes wired with conditional edges
-- **FAISS retrieval** — primary backend with L2-normalized embeddings for cosine similarity; experimental Pinecone and LlamaIndex adapters included as alternative backends
+- **FAISS retrieval** — the only backend the live agent queries, with L2-normalized embeddings for cosine similarity. `retrieval/pinecone_store.py` and `retrieval/llamaindex_loader.py` are standalone reference implementations of alternative backends — neither is wired into `agent/nodes.py`, so switching to them today would mean calling their functions directly rather than flipping a config flag
 - **In-process session memory** with LangGraph MemorySaver checkpointing across all turns in a session (process-local; not persisted across restarts)
 - **Real-time streaming responses** via FastAPI Server-Sent Events (SSE) with token-level output
 - **LangSmith observability** — every graph run is traced end-to-end with inputs, outputs, latency, and token usage
@@ -81,9 +80,7 @@
 | LLM Abstraction | LangChain 0.3.7 |
 | Language Model | OpenAI GPT-4o-mini |
 | Embeddings | sentence-transformers all-MiniLM-L6-v2 |
-| Vector Store (local) | FAISS faiss-cpu 1.13.0 |
-| Vector Store (cloud) | Pinecone |
-| Document Indexing | LlamaIndex (llama-index-core) |
+| Vector Store | FAISS faiss-cpu 1.13.0 — the only backend the live agent actually queries |
 | Web Search | Tavily Search API |
 | Observability | LangSmith |
 | Backend API | FastAPI 0.115.4 + uvicorn |
