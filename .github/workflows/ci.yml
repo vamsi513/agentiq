@@ -102,7 +102,11 @@ jobs:
                     sudo docker rmi "$img" || true
                   fi
                 done
-                sudo docker image prune -f
+                # Best-effort: buildkit runs its own background GC right after a
+                # build, which can hold this lock and make prune fail with "a
+                # prune operation is already running" even though the deploy
+                # itself succeeded (image already removed above). Non-fatal.
+                sudo docker image prune -f || true
                 exit 0
               fi
               echo "Attempt $attempt failed, retrying in 5s..."
