@@ -64,7 +64,7 @@
 - **In-process session memory** with LangGraph MemorySaver checkpointing across all turns in a session (process-local; not persisted across restarts)
 - **Real-time streaming responses** via FastAPI Server-Sent Events (SSE) with token-level output
 - **LangSmith observability** — every graph run is traced end-to-end with inputs, outputs, latency, and token usage
-- **RAGAS evaluation** — answer relevance **0.68**, faithfulness **0.69** across 50 multi-hop QA pairs
+- **RAGAS evaluation** — answer relevance **0.73**, faithfulness **0.69** across 50 queries spanning retrieval, direct-answer, and web search routes
 - **PDF upload** — users can upload their own PDFs; text is extracted, chunked, and indexed into FAISS at runtime
 - **LoRA fine-tuning notebook** — `notebooks/finetune_lora.ipynb` demonstrates full PEFT/LoRA fine-tuning on a custom Q&A dataset
 - **Kubernetes manifests** — `k8s/` directory contains Deployment, Service/Ingress, and HPA manifests as a deployment reference
@@ -231,20 +231,24 @@ agentiq/
 
 ## Evaluation Results
 
-Evaluated on 50 curated AI/ML multi-hop question-answer pairs using RAGAS.
+Evaluated on 50 test queries spanning all three routing paths — retrieval, direct-answer, and web search — using RAGAS.
 
 | Metric | Score |
 |---|---|
-| Answer Relevancy | **0.6847** |
-| Faithfulness | **0.6862** |
+| Answer Relevancy | **0.7317** |
+| Faithfulness | **0.6917** |
 | Queries Evaluated | **50** |
-| Avg Latency | **6628ms** |
+| Avg Latency | **3513ms** |
 
 ### Route distribution across 50 queries
 
 | Route | Count | % |
 |---|---|---|
-| Document Retrieval | 50 | 100% |
+| Document Retrieval | 25 | 50% |
+| Direct Answer | 13 | 26% |
+| Web Search | 12 | 24% |
+
+Each query is labeled by which route it's actually expected to take (verified against the live router before being added to the test set), so this distribution reflects real routing behavior across all three paths rather than a retrieval-only test set.
 
 ```bash
 python -m evaluation.eval_runner
@@ -252,7 +256,7 @@ python -m evaluation.eval_runner
 
 A **deterministic retrieval evaluation** (no API key required) runs automatically in CI on every push — `tests/test_retrieval_eval.py` checks hit rate across 25 retrieval queries against the FAISS index.
 
-The full RAGAS pipeline can be triggered manually via the **RAGAS Evaluation** workflow in GitHub Actions — it SSHes into EC2 and runs the evaluation there using API keys stored in the server's `.env` file.
+The full RAGAS pipeline is triggered via the **RAGAS Evaluation** workflow in GitHub Actions — it builds the same Docker image production deploys from, runs it on EC2 with real API keys, and commits `evaluation/evaluation_results.json` back to the repo automatically once the run succeeds, so the numbers above always match the last real, passing run.
 
 ---
 
