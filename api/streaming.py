@@ -148,6 +148,17 @@ async def stream_agent_response(
                 elif node_name in ("retriever", "web_search") and isinstance(output, dict):
                     if output.get("sources"):
                         captured_sources = output["sources"]
+                elif node_name == "security" and isinstance(output, dict):
+                    # A blocked query never reaches the router or any LLM
+                    # call, so there are no on_chat_model_stream token events
+                    # to forward -- emit the fixed refusal message here as a
+                    # single token so the client still renders something
+                    # instead of a blank message.
+                    if output.get("route_decision") == "blocked":
+                        blocked_messages = output.get("messages", [])
+                        yield _sse("route", "blocked")
+                        if blocked_messages:
+                            yield _sse("token", blocked_messages[-1].content)
 
         # Emit collected sources then terminate
         if captured_sources:

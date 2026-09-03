@@ -1,4 +1,4 @@
-export type RouteDecision = "retrieval" | "web_search" | "direct";
+export type RouteDecision = "retrieval" | "web_search" | "direct" | "blocked";
 
 export interface ChatRequest {
   query: string;

@@ -279,6 +279,9 @@ The full RAGAS pipeline is triggered via the **RAGAS Evaluation** workflow in Gi
 
 ## How It Works
 
+### Security Node
+Runs before routing on every turn. Scores the query with heuristics for instruction-override phrasing, routing/tool-manipulation attempts, and obfuscation signals (padding, encoded blobs). A high-confidence match short-circuits straight to a fixed refusal — no LLM call or tool invocation happens for a blocked query. See [Production Readiness](#production-readiness) below for what this does and doesn't claim.
+
 ### Router Node
 Receives the user query and uses GPT-4o-mini to decide between `retrieval`, `web_search`, or `direct`. Unknown responses default to `retrieval`.
 
@@ -296,6 +299,96 @@ Receives the assembled context and full conversation history. Constructs a groun
 
 ### Memory (MemorySaver)
 Every graph run is checkpointed under the session's `thread_id`. The full state graph is restored on each invocation for multi-turn coherence.
+
+---
+
+## Production Readiness
+
+Request flow:
+
+```
+User
+  ↓
+FastAPI (/chat, /chat/stream)
+  ↓
+Pydantic validation (max 2000 chars) + per-IP rate limit (30 req/min)
+  ↓
+Security node — heuristic ALLOW / FLAG / BLOCK before routing
+  ↓
+Router node (LLM classifies: retrieval / web_search / direct)
+  ↓
+Retriever (FAISS) / Web Search (Tavily) / Direct LLM
+  ↓
+Generator node (grounded, cited answer)
+  ↓
+Validated response
+```
+
+This section documents what's actually implemented and tested — not aspirational claims. Every number below comes from a command you can re-run.
+
+### Security
+
+- **Pre-routing heuristic boundary** (`agent/security.py`): scores every query for instruction-override phrasing (e.g. "ignore previous instructions", "reveal your system prompt"), direct routing/tool-manipulation attempts, and obfuscation signals (repeated-character padding, long encoded blobs) before it reaches the router. A combined score above threshold short-circuits to a fixed refusal — verified via `tests/test_security.py::TestGraphNeverCallsLLMOnBlock` that the LLM mock's `.invoke()` is never called for a blocked query.
+- **This is a heuristic, not a guarantee.** It can both over- and under-trigger — see the module docstring in `agent/security.py` for the honest scope. The real backstop is architectural: system instructions and user queries are always separate message roles in every LLM call (`_ROUTER_SYSTEM_PROMPT`, `_GENERATOR_SYSTEM_PROMPT` in `agent/nodes.py`), so content that slips past the heuristic still can't literally rewrite the system message.
+- **Tool safety**: AgentIQ does not use LLM function-calling — the graph deterministically dispatches to `web_search(query)` with the same string already bounded by Pydantic's `max_length=2000`. There are no model-generated JSON tool arguments to validate, which meaningfully shrinks this attack surface compared to a function-calling agent.
+- **API auth**: optional `X-API-Key` header, checked with `hmac.compare_digest` (constant-time). Unset by default for the public demo — the startup log explicitly warns when this is the case.
+- **Secrets**: `.env` is gitignored and was never committed (verified via `git log --all -- .env`).
+
+**Not claimed:** "prompt-injection proof," "enterprise-grade security," or any guarantee that no adversarial input can ever get through.
+
+### Reliability
+
+- **LLM calls** (`agent/nodes.py::_get_llm`): explicit 30s timeout, 2 bounded retries (OpenAI SDK's built-in exponential backoff for 429/5xx/connection errors) — both set explicitly rather than left as undocumented library defaults (verified: `ChatOpenAI`'s actual default is `request_timeout=None`, i.e. unbounded).
+- **Tavily web search** (`tools/web_search.py`): the client library hardcodes a 100s timeout internally with no override, which is too slow for a chat response — the call runs in a worker thread bounded by our own 15s wall-clock timeout via `Future.result(timeout=...)`. Retries (max 3 attempts, exponential backoff + jitter) apply only to genuinely transient failures — connection errors, timeouts, and 5xx. **429 (rate limit) and auth errors are never retried** — retrying a 429 just hammers the same window harder, and a bad key can't be fixed by trying again. See `tests/test_failure_modes.py` for a case-by-case breakdown (429, timeout, 5xx, 4xx, connection failure, invalid key), each asserting both the fallback behavior and the exact retry count.
+- **Graceful degradation**: every external-dependency failure returns a labeled fallback result rather than raising — the generator still produces an answer (falling back to the model's own knowledge), and the user is told search was unavailable rather than seeing a raw error.
+
+### Concurrency
+
+- **FAISS**: reads (`query_vectorstore`) are safe under concurrency — `IndexFlatIP.search()` doesn't mutate index state. The lazy-build path (`get_vectorstore()`) previously had a real bug: an `_index_lock` was declared for exactly this purpose but never actually acquired, so two concurrent first-requests (e.g. if startup pre-warm fails) could both build and redundantly overwrite the on-disk index. Fixed with double-checked locking — the common case (index already cached) stays lock-free. Per-session upload indices (`_session_indices`) were already correctly locked (`_session_lock`) and untouched.
+- **LangGraph**: the graph runs via `ainvoke`/`astream_events`, which executes sync node functions in a thread pool — confirmed concurrent requests genuinely run in separate threads, not serialized.
+- **MemorySaver**: process-local, in-memory, keyed by `thread_id` (session ID). Concurrent requests to *different* sessions don't conflict. A double-submit within the *same* session concurrently is an unhandled edge case — not fixed, since it's a narrow UX edge case (a user double-clicking send) rather than a security or correctness issue affecting other users.
+
+### Rate Limiting
+
+- In-process token-bucket, 30 requests/minute per IP, bounded tracked-IP table (max 2000 entries). Correct for the current single-instance deployment; resets on restart and would not be shared across replicas if this were ever run behind the `k8s/` manifests (a deployment reference, not what's live). A multi-instance deployment would need a shared store (Redis or similar) — not implemented, documented here as a real future requirement rather than pretended away.
+- Verified firing under actual concurrent load (not just sequential unit tests): `scripts/load_test.py`'s dedicated limiter check fires 60 concurrent requests from one IP and confirms exactly 30 are allowed and 30 rejected with `429`.
+
+### Observability
+
+- Structured JSON logging (`structlog`) throughout; every response carries an `X-Request-ID` header (client-supplied or generated).
+- Per-stage timing: every graph node (`security`, `router`, `retriever`, `web_search`, `direct`, `generator`) logs a `stage_timing stage=<name> duration_ms=<n>` line, independent of which return path the node takes — enough to derive real p50/p95 per stage from production logs with a `grep`/`awk`, no tracing dependency.
+- Never logged: API keys, secrets, auth headers. Query content is logged truncated to 60-80 chars for traceability, not stored in full.
+
+### Evaluation
+
+- **Router accuracy**: 50/50 (100%) on the current labeled test set — full confusion matrix and per-route breakdown, not just an aggregate route count (see `evaluation/eval_runner.py::_compute_router_accuracy`). Read the methodology caveat under [Router accuracy](#router-accuracy-5050-100-on-the-current-dev-set) above before treating that number as a general reliability guarantee — it measures agreement with a dev set built alongside the router, not an independently frozen holdout.
+- Reproduce: `python -m evaluation.eval_runner`
+
+### Testing
+
+- 116 tests, all passing, all offline — no test depends on a real paid API call. Run: `pytest tests/ -v`
+- `tests/test_security.py` (23 tests): adversarial cases — direct injection, routing manipulation, obfuscation/padding, oversized input, malformed input — plus confirmation that legitimate queries across all three real routing categories are never falsely flagged.
+- `tests/test_failure_modes.py` (17 tests): Tavily 429/timeout/5xx/4xx/connection-failure/invalid-key, LLM timeout/error, empty retrieval, malformed API requests, and unrecognized router output — all mocked, deterministic.
+
+### Load Testing
+
+`scripts/load_test.py` drives concurrent requests against the FastAPI app in-process (`httpx.AsyncClient` + `ASGITransport`, no real server needed) with the LLM and Tavily calls mocked. This measures **application/orchestration performance only** — it is explicitly not a benchmark of OpenAI or Tavily's own latency, which varies independently with their load and your plan tier.
+
+Reproduce: `python -m scripts.load_test --levels 10 25 50 --requests-per-level 100`
+
+Measured on the development machine, mocked upstreams, 100 requests per level:
+
+| Concurrency | Throughput | p50 | p95 | p99 | Errors |
+|---|---|---|---|---|---|
+| 10 | 76.4 req/s | 127ms | 159ms | 161ms | 0 |
+| 25 | 111.1 req/s | 194ms | 260ms | 272ms | 0 |
+| 50 | 112.0 req/s | 383ms | 535ms | 535ms | 0 |
+
+Throughput plateaus between 25 and 50 concurrent requests while latency roughly doubles — a real ceiling from Python's default thread pool sizing for the sync LangGraph node functions, not a fabricated "scales infinitely" claim. Not yet profiled to find the exact bottleneck; a reasonable next step, not done here.
+
+**Real-provider load testing** (actual OpenAI/Tavily latency) is deliberately not automated — it costs money and can trip real rate limits. To do it safely: point `scripts/load_test.py`'s mocked calls at the real `_get_llm()`/`web_search()` functions instead, use low concurrency (2-3) and a small request count, and check your provider dashboards for cost/quota impact before scaling up.
+
+**Not claimed:** any specific production throughput ceiling, or that these numbers reflect real OpenAI/Tavily response times.
 
 ---
 

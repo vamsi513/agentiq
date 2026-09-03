@@ -2,11 +2,18 @@
 agent/graph.py — Complete LangGraph StateGraph for AgentIQ.
 
 Graph topology:
-    START → router → [retriever | web_search | direct] → [generator | END]
+    START → security → [router → [retriever | web_search | direct] | END]
+                                          ↓            ↓
+                                      generator ────────
+                                          ↓
+                                         END
 
-Conditional routing is driven by the ``route_decision`` field written by
-the router node.  MemorySaver checkpointing gives every session in-process
-multi-turn memory keyed by ``thread_id``.
+The security node runs before routing and can short-circuit straight to
+END with a fixed refusal message (see agent/security.py, agent/nodes.py's
+security_node) — no LLM call or tool invocation happens for a blocked
+query. Conditional routing after that is driven by the ``route_decision``
+field written by the router node.  MemorySaver checkpointing gives every
+session in-process multi-turn memory keyed by ``thread_id``.
 """
 
 import logging
@@ -34,6 +41,12 @@ def _route_decision(
     return "direct"
 
 
+def _security_gate(state: AgentState) -> Literal["blocked", "continue"]:
+    """Short-circuit to END when security_node set route_decision='blocked';
+    otherwise proceed into the router as normal."""
+    return "blocked" if state.get("route_decision") == "blocked" else "continue"
+
+
 # ── Graph builder ─────────────────────────────────────────────────────────────
 
 def build_graph(checkpointer: MemorySaver | None = None):
@@ -53,12 +66,14 @@ def build_graph(checkpointer: MemorySaver | None = None):
         generator_node,
         retriever_node,
         router_node,
+        security_node,
         web_search_node,
     )
 
     graph = StateGraph(AgentState)
 
     # ── Nodes ─────────────────────────────────────────────────────────────────
+    graph.add_node("security", security_node)
     graph.add_node("router", router_node)
     graph.add_node("retriever", retriever_node)
     graph.add_node("web_search", web_search_node)
@@ -66,7 +81,17 @@ def build_graph(checkpointer: MemorySaver | None = None):
     graph.add_node("generator", generator_node)
 
     # ── Entry ─────────────────────────────────────────────────────────────────
-    graph.add_edge(START, "router")
+    graph.add_edge(START, "security")
+
+    # ── Security gate: a blocked query goes straight to END ──────────────────
+    graph.add_conditional_edges(
+        "security",
+        _security_gate,
+        {
+            "blocked": END,
+            "continue": "router",
+        },
+    )
 
     # ── Conditional routing ───────────────────────────────────────────────────
     graph.add_conditional_edges(

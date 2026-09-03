@@ -15,6 +15,7 @@ Nodes:
     generator_node   — Final answer synthesis with citations
 """
 
+import asyncio
 import functools
 import logging
 import time
@@ -23,19 +24,45 @@ from typing import Any
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_openai import ChatOpenAI
 
+from agent.security import SecurityAction, evaluate_query
 from agent.state import AgentState
 from config import settings
 
 logger = logging.getLogger(__name__)
+
+_BLOCKED_RESPONSE = (
+    "I can't process that request — it matched patterns associated with "
+    "prompt-injection or instruction-override attempts. Try rephrasing your "
+    "question as a normal request."
+)
 
 
 def _timed(stage: str):
     """Log wall-clock duration for a pipeline stage, independent of which
     return path the wrapped node takes (including its own caught-exception
     paths). Grep production logs for 'stage_timing' to derive per-stage
-    p50/p95 without adding a tracing dependency."""
+    p50/p95 without adding a tracing dependency.
+
+    Handles both sync and async node functions. A naive sync-only wrapper
+    applied to an async function would only time how long it takes to
+    *construct* the coroutine object (near-zero), not how long it actually
+    takes to run -- that would silently produce meaningless timing data the
+    moment any node became async (web_search_node did, to support Tavily's
+    genuinely-cancellable timeout; see tools/web_search.py)."""
 
     def decorator(fn):
+        if asyncio.iscoroutinefunction(fn):
+            @functools.wraps(fn)
+            async def async_wrapper(*args, **kwargs):
+                start = time.perf_counter()
+                try:
+                    return await fn(*args, **kwargs)
+                finally:
+                    duration_ms = (time.perf_counter() - start) * 1000
+                    logger.info("stage_timing stage=%s duration_ms=%.1f", stage, duration_ms)
+
+            return async_wrapper
+
         @functools.wraps(fn)
         def wrapper(*args, **kwargs):
             start = time.perf_counter()
@@ -54,6 +81,15 @@ def _timed(stage: str):
 
 _llm: ChatOpenAI | None = None
 
+# ChatOpenAI's own default is request_timeout=None -- genuinely unbounded, so
+# a hung upstream connection would hang the whole graph node indefinitely.
+# max_retries=2 (its default) uses the OpenAI SDK's built-in exponential
+# backoff for retryable errors (429, 5xx, connection errors) -- verified
+# against the installed langchain-openai version, not assumed. Set both
+# explicitly rather than relying on undocumented library defaults.
+_LLM_TIMEOUT_SECONDS = 30.0
+_LLM_MAX_RETRIES = 2
+
 
 def _get_llm() -> ChatOpenAI:
     global _llm
@@ -64,8 +100,57 @@ def _get_llm() -> ChatOpenAI:
             max_tokens=settings.max_tokens,
             api_key=settings.openai_api_key,
             streaming=True,
+            timeout=_LLM_TIMEOUT_SECONDS,
+            max_retries=_LLM_MAX_RETRIES,
         )
     return _llm
+
+
+# ── Security node ─────────────────────────────────────────────────────────────
+
+@_timed("security")
+def security_node(state: AgentState) -> dict[str, Any]:
+    """
+    Pre-routing security boundary — runs before the router node on every turn.
+
+    Scores the query via agent.security.evaluate_query() and, on a BLOCK
+    decision, short-circuits the turn with a fixed refusal message: no LLM
+    call and no tool invocation happen with that input. ALLOW and FLAG both
+    let the turn proceed to the router as normal (FLAG differs only in that
+    evaluate_query already logged why it was flagged) — see agent/security.py
+    for why this is a heuristic defense-in-depth layer, not a claim that
+    injection is "solved".
+
+    Args:
+        state: Current AgentState containing ``query``.
+
+    Returns:
+        On BLOCK: partial state setting route_decision="blocked" and the
+        refusal message as the final AI message (graph.py routes this
+        straight to END, bypassing router/generator/tools entirely).
+        On ALLOW/FLAG: empty dict — no state change, turn proceeds normally.
+    """
+    query = state.get("query", "")
+    decision = evaluate_query(query)
+
+    if decision.action == SecurityAction.BLOCK:
+        logger.warning(
+            "Blocking query before routing: reasons=%s score=%d",
+            decision.reasons, decision.score,
+        )
+        return {
+            "route_decision": "blocked",
+            "messages": [AIMessage(content=_BLOCKED_RESPONSE)],
+            "error": "blocked_by_security_check",
+            "metadata": {"security_action": "block", "security_reasons": decision.reasons},
+        }
+
+    if decision.action == SecurityAction.FLAG:
+        return {"metadata": {"security_action": "flag", "security_reasons": decision.reasons}}
+
+    # LangGraph requires every node to write at least one state key -- this
+    # is a no-op echo of a field that's already None, not a real state change.
+    return {"error": None}
 
 
 # ── Router node ───────────────────────────────────────────────────────────────
@@ -247,9 +332,17 @@ def retriever_node(state: AgentState) -> dict[str, Any]:
 # ── Web search node ───────────────────────────────────────────────────────────
 
 @_timed("web_search")
-def web_search_node(state: AgentState) -> dict[str, Any]:
+async def web_search_node(state: AgentState) -> dict[str, Any]:
     """
     Perform a live web search via Tavily and populate context + sources.
+
+    Async because tools.web_search.web_search() is async — it awaits Tavily
+    through AsyncTavilyClient/httpx so that a client-side timeout genuinely
+    cancels the in-flight request instead of abandoning a background thread
+    to run to completion unsupervised. LangGraph runs sync and async nodes
+    interchangeably in the same graph (astream_events/ainvoke await async
+    nodes directly and run sync ones in a thread pool), so this doesn't
+    require any change to agent/graph.py's wiring.
 
     Args:
         state: Current AgentState containing ``query``.
@@ -267,7 +360,7 @@ def web_search_node(state: AgentState) -> dict[str, Any]:
     try:
         from tools.web_search import web_search
 
-        results = web_search(query)
+        results = await web_search(query)
 
         context_parts: list[str] = []
         sources: list[dict[str, Any]] = []

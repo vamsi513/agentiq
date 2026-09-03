@@ -31,6 +31,10 @@ const ROUTE_META: Record<
   retrieval: { label: "Retrieval", color: "var(--route-retrieval)", bg: "var(--route-retrieval-bg)", icon: BookOpen },
   web_search: { label: "Web Search", color: "var(--route-web-search)", bg: "var(--route-web-search-bg)", icon: Globe },
   direct: { label: "Direct", color: "var(--route-direct)", bg: "var(--route-direct-bg)", icon: MessageCircle },
+  // Set by the pre-routing security check (agent/security.py) when a query
+  // matches injection/instruction-override signals strongly enough to
+  // refuse outright, before the router or any tool/LLM call runs.
+  blocked: { label: "Blocked", color: "var(--danger)", bg: "var(--danger-bg)", icon: AlertCircle },
 };
 
 function newId(): string {

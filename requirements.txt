@@ -42,6 +42,11 @@ python-dotenv>=1.2.2
 langsmith>=0.1.147
 structlog>=24.0
 
+# ── Resilience (bounded retry with backoff for external API calls) ──────────
+# Already a transitive dep of langchain-core; pinned directly since
+# tools/web_search.py and agent/nodes.py now import it explicitly.
+tenacity>=8.1.0,<10
+
 cryptography>=43.0.0
 setuptools>=83.0.0
 pillow>=12.3.0

@@ -11,7 +11,9 @@ All Tavily API calls are mocked — no real network requests are made.
 """
 
 import sys
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 import tools.web_search  # noqa: F401 — ensures tools.web_search is registered in sys.modules
 
@@ -82,9 +84,18 @@ class TestFallbackResult:
 # ── web_search function ───────────────────────────────────────────────────────
 
 class TestWebSearch:
-    """Tests for the main web_search() function."""
+    """Tests for the main web_search() coroutine.
 
-    def test_returns_fallback_when_no_api_key(self):
+    web_search() is async (it awaits AsyncTavilyClient/httpx so a
+    client-side timeout genuinely cancels the in-flight request -- see
+    tools/web_search.py's module docstring), so the underlying client's
+    .search() must be an AsyncMock, not a plain MagicMock: a MagicMock
+    return value isn't awaitable and would raise a TypeError as soon as the
+    code does `await client.search(...)`.
+    """
+
+    @pytest.mark.asyncio
+    async def test_returns_fallback_when_no_api_key(self):
         """Returns a single fallback result when TAVILY_API_KEY is not set."""
         ws_module = sys.modules["tools.web_search"]
 
@@ -95,24 +106,25 @@ class TestWebSearch:
             mock_settings.is_tavily_configured.return_value = False
             mock_settings.max_web_results = 5
 
-            results = ws_module.web_search("what is RAG?")
+            results = await ws_module.web_search("what is RAG?")
 
         assert len(results) == 1
         assert results[0]["is_fallback"] is True
 
-    def test_returns_fallback_on_client_exception(self):
-        """Returns fallback (does not raise) when TavilyClient.search throws."""
+    @pytest.mark.asyncio
+    async def test_returns_fallback_on_client_exception(self):
+        """Returns fallback (does not raise) when the client's search() throws."""
         ws_module = sys.modules["tools.web_search"]
 
         mock_client = MagicMock()
-        mock_client.search.side_effect = ConnectionError("network error")
+        mock_client.search = AsyncMock(side_effect=ConnectionError("network error"))
         ws_module._client = mock_client
 
         with patch("tools.web_search.settings") as mock_settings:
             mock_settings.is_tavily_configured.return_value = True
             mock_settings.max_web_results = 5
 
-            results = ws_module.web_search("latest AI news")
+            results = await ws_module.web_search("latest AI news")
 
         # Must not raise; must return a fallback
         assert isinstance(results, list)
@@ -122,7 +134,8 @@ class TestWebSearch:
         # Reset
         ws_module._client = None
 
-    def test_normalises_valid_api_response(self):
+    @pytest.mark.asyncio
+    async def test_normalises_valid_api_response(self):
         """Normalises a realistic Tavily API response into expected dict shape."""
         ws_module = sys.modules["tools.web_search"]
 
@@ -144,14 +157,14 @@ class TestWebSearch:
         }
 
         mock_client = MagicMock()
-        mock_client.search.return_value = fake_response
+        mock_client.search = AsyncMock(return_value=fake_response)
         ws_module._client = mock_client
 
         with patch("tools.web_search.settings") as mock_settings:
             mock_settings.is_tavily_configured.return_value = True
             mock_settings.max_web_results = 5
 
-            results = ws_module.web_search("what is RAG?")
+            results = await ws_module.web_search("what is RAG?")
 
         assert len(results) == 2
         assert results[0]["title"] == "What is RAG?"
@@ -162,19 +175,20 @@ class TestWebSearch:
         # Reset
         ws_module._client = None
 
-    def test_returns_fallback_when_empty_results(self):
+    @pytest.mark.asyncio
+    async def test_returns_fallback_when_empty_results(self):
         """Returns fallback when Tavily returns an empty results list."""
         ws_module = sys.modules["tools.web_search"]
 
         mock_client = MagicMock()
-        mock_client.search.return_value = {"results": []}
+        mock_client.search = AsyncMock(return_value={"results": []})
         ws_module._client = mock_client
 
         with patch("tools.web_search.settings") as mock_settings:
             mock_settings.is_tavily_configured.return_value = True
             mock_settings.max_web_results = 5
 
-            results = ws_module.web_search("obscure query")
+            results = await ws_module.web_search("obscure query")
 
         assert len(results) == 1
         assert results[0]["is_fallback"] is True

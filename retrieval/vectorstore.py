@@ -242,6 +242,17 @@ def get_vectorstore() -> tuple[faiss.Index, list[dict[str, Any]]]:
     On subsequent calls: loads from disk.
     The result is cached in module-level globals to avoid redundant I/O.
 
+    Concurrency: the fast path (index already cached) takes no lock and is
+    safe — it's a read of module globals, and FAISS's IndexFlatIP.search()
+    doesn't mutate state, so concurrent readers never race. The slow path
+    (building or loading the index) is a write and previously ran completely
+    unsynchronized despite _index_lock existing for exactly this purpose:
+    two concurrent first-requests (e.g. both arriving before startup pre-warm
+    finishes, or if pre-warm itself failed) could both enter the build branch,
+    each embed the full corpus, and race to write index.faiss/chunks.pkl to
+    the same path. Double-checked locking closes that window while keeping
+    the common case (already built) lock-free.
+
     Returns:
         Tuple of (faiss.Index, chunks_list).
     """
@@ -250,20 +261,25 @@ def get_vectorstore() -> tuple[faiss.Index, list[dict[str, Any]]]:
     if _faiss_index is not None and _faiss_chunks is not None:
         return _faiss_index, _faiss_chunks
 
-    index_path = settings.faiss_index_path
+    with _index_lock:
+        # Re-check: another thread may have built it while we waited for the lock.
+        if _faiss_index is not None and _faiss_chunks is not None:
+            return _faiss_index, _faiss_chunks
 
-    if index_path.exists() and (index_path / "index.faiss").exists():
-        logger.info("Loading existing FAISS index from disk.")
-        _faiss_index, _faiss_chunks = _load_index(index_path)
-    else:
-        logger.info("No existing index found — building from documents.")
-        docs_file = settings.documents_path / "sample_docs.txt"
-        docs = _parse_documents(docs_file)
-        chunks = _chunk_documents(docs)
-        _faiss_index, _faiss_chunks = _build_index(chunks)
-        _save_index(_faiss_index, _faiss_chunks, index_path)
+        index_path = settings.faiss_index_path
 
-    return _faiss_index, _faiss_chunks
+        if index_path.exists() and (index_path / "index.faiss").exists():
+            logger.info("Loading existing FAISS index from disk.")
+            _faiss_index, _faiss_chunks = _load_index(index_path)
+        else:
+            logger.info("No existing index found — building from documents.")
+            docs_file = settings.documents_path / "sample_docs.txt"
+            docs = _parse_documents(docs_file)
+            chunks = _chunk_documents(docs)
+            _faiss_index, _faiss_chunks = _build_index(chunks)
+            _save_index(_faiss_index, _faiss_chunks, index_path)
+
+        return _faiss_index, _faiss_chunks
 
 
 def add_documents_to_vectorstore(

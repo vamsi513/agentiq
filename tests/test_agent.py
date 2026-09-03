@@ -229,9 +229,18 @@ class TestRetrieverNode:
 # ── web_search_node ───────────────────────────────────────────────────────────
 
 class TestWebSearchNode:
-    """Tests for the Tavily web_search_node function."""
+    """Tests for the Tavily web_search_node function.
 
-    def test_returns_context_and_sources_on_success(self):
+    web_search_node is async (it awaits tools.web_search.web_search(), which
+    itself awaits AsyncTavilyClient/httpx so a timeout genuinely cancels the
+    in-flight request -- see tools/web_search.py). unittest.mock.patch()
+    auto-detects that the patched target is a coroutine function and
+    produces an AsyncMock automatically, so the patch calls below are
+    unchanged from the sync version; only the test functions themselves
+    need to be async/await the node call."""
+
+    @pytest.mark.asyncio
+    async def test_returns_context_and_sources_on_success(self):
         """web_search_node populates context and sources from Tavily results."""
         from agent.nodes import web_search_node
 
@@ -245,13 +254,14 @@ class TestWebSearchNode:
         ]
 
         with patch("tools.web_search.web_search", return_value=mock_results):
-            result = web_search_node(_base_state(query="latest AI news"))
+            result = await web_search_node(_base_state(query="latest AI news"))
 
         assert len(result["sources"]) == 1
         assert result["sources"][0]["type"] == "web_search"
         assert "AI News" in result["context"]
 
-    def test_handles_fallback_result(self):
+    @pytest.mark.asyncio
+    async def test_handles_fallback_result(self):
         """web_search_node does not add fallback items to sources list."""
         from agent.nodes import web_search_node
 
@@ -266,17 +276,18 @@ class TestWebSearchNode:
         ]
 
         with patch("tools.web_search.web_search", return_value=fallback):
-            result = web_search_node(_base_state(query="something"))
+            result = await web_search_node(_base_state(query="something"))
 
         # Fallback items are excluded from sources
         assert result["sources"] == []
 
-    def test_returns_fallback_context_on_exception(self):
+    @pytest.mark.asyncio
+    async def test_returns_fallback_context_on_exception(self):
         """web_search_node does not raise when web_search throws."""
         from agent.nodes import web_search_node
 
         with patch("tools.web_search.web_search", side_effect=Exception("network")):
-            result = web_search_node(_base_state(query="news"))
+            result = await web_search_node(_base_state(query="news"))
 
         assert result["sources"] == []
         assert "failed" in result["context"].lower()
