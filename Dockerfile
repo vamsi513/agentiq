@@ -21,7 +21,12 @@ COPY api ./api
 COPY retrieval ./retrieval
 COPY tools ./tools
 COPY config.py ./
-COPY faiss_index ./faiss_index
+
+# Build the FAISS index at image-build time from the bundled sample corpus
+# (retrieval/documents/sample_docs.txt). The index itself is gitignored, so
+# it can't be COPYed in a clean checkout; building it here bakes an identical
+# index into the image and keeps container start-up off the build path.
+RUN python -c "from retrieval.vectorstore import get_vectorstore; get_vectorstore()"
 
 # Run as an unprivileged, non-root user. On platforms that assign an arbitrary
 # UID at runtime (OpenShift restricted-v2), the process still lands in group 0,
