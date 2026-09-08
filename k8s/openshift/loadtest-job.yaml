@@ -1,0 +1,61 @@
+# Distributed load generator for exercising the HorizontalPodAutoscaler.
+#
+# A single client can't drive the autoscaler: /chat is I/O-bound (most of
+# each request is spent awaiting the LLM) and the API rate-limits one source
+# IP to 30 req/min. This Job spreads load across many pods, each with its own
+# IP and its own rate-limit budget, hitting the in-cluster Service directly.
+#
+#   oc apply -f k8s/openshift/loadtest-job.yaml
+#   oc get hpa agentiq-api-hpa -w        # in another terminal
+#   oc logs -l app=agentiq-loadtest --tail=1 --prefix | grep sent
+#   oc delete job agentiq-loadtest
+#
+# With parallelism 8 and a 2s gap this sustains ~3-4 req/s and scales the
+# deployment to ~4 replicas. Raise parallelism for more. Note this spends
+# real LLM tokens and will hit the OpenAI account's per-minute rate limit
+# before it hits any sandbox limit.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: agentiq-loadtest
+  labels:
+    app: agentiq-loadtest
+spec:
+  parallelism: 8
+  completions: 8
+  backoffLimit: 0
+  activeDeadlineSeconds: 420
+  template:
+    metadata:
+      labels:
+        app: agentiq-loadtest
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: load
+          image: registry.access.redhat.com/ubi9/ubi-minimal:latest
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { cpu: 200m, memory: 128Mi }
+          env:
+            - name: AGENTIQ_API_KEY
+              valueFrom:
+                secretKeyRef: { name: agentiq-secrets, key: AGENTIQ_API_KEY }
+            - name: TARGET
+              value: "http://agentiq-api/chat/stream"
+            - name: DURATION
+              value: "240"
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              end=$(( $(date +%s) + DURATION ))
+              n=0
+              while [ "$(date +%s)" -lt "$end" ]; do
+                n=$((n+1))
+                curl -s -o /dev/null -m 60 -X POST "$TARGET" \
+                  -H "X-API-Key: $AGENTIQ_API_KEY" \
+                  -H 'Content-Type: application/json' \
+                  -d "{\"query\":\"In one sentence, explain vector search. req $n $HOSTNAME\"}"
+                sleep 2
+              done
+              echo "$HOSTNAME sent $n requests"
