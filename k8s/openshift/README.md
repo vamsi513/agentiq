@@ -23,10 +23,14 @@ actually deploy here.
 oc apply -f k8s/openshift/build.yaml
 oc start-build agentiq --from-dir=. --follow
 
-# 2. API keys (OpenAI required, Tavily optional)
+# 2. API keys. OPENAI_API_KEY is required; TAVILY_API_KEY is optional
+#    (web-search tool). AGENTIQ_API_KEY gates /chat and /chat/stream —
+#    callers must then send it as the X-API-Key header. Omit it only for
+#    a throwaway demo on an unlisted route.
 oc create secret generic agentiq-secrets \
   --from-literal=OPENAI_API_KEY=... \
-  --from-literal=TAVILY_API_KEY=...
+  --from-literal=TAVILY_API_KEY=... \
+  --from-literal=AGENTIQ_API_KEY=...
 
 # 3. deploy
 oc apply -f k8s/openshift/deployment.yaml \
@@ -39,9 +43,8 @@ oc get route agentiq-api -o jsonpath='{.spec.host}'
 
 ## Notes
 
-- `AGENTIQ_API_KEY` is not set, so `/chat` is unauthenticated. Fine for a
-  short-lived demo on an unlisted route; set it (and add it to
-  `agentiq-secrets`) for anything longer-lived.
+- `/health` is always public. `/chat` and `/chat/stream` require the
+  `X-API-Key` header when `AGENTIQ_API_KEY` is in `agentiq-secrets`.
 - The `build.yaml` `resources` block is load-bearing — see the comment in
   that file.
 - The Developer Sandbox idles workloads after a period of inactivity; the
