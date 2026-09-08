@@ -1,0 +1,38 @@
+# AgentIQ API — Service + Route for OpenShift.
+#
+# Replaces the nginx Ingress in k8s/service.yaml: OpenShift has no nginx
+# ingress controller, it exposes HTTP workloads through Route objects served
+# by the built-in router. The host is left unset so the router assigns one
+# under the cluster's apps domain; TLS is terminated at the edge.
+apiVersion: v1
+kind: Service
+metadata:
+  name: agentiq-api
+  labels:
+    app: agentiq-api
+spec:
+  selector:
+    app: agentiq-api
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8000
+      protocol: TCP
+  type: ClusterIP
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: agentiq-api
+  labels:
+    app: agentiq-api
+spec:
+  to:
+    kind: Service
+    name: agentiq-api
+    weight: 100
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

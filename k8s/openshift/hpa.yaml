@@ -1,0 +1,29 @@
+# AgentIQ API — HorizontalPodAutoscaler for OpenShift.
+#
+# Differences from k8s/hpa.yaml:
+#   - no namespace field (applies to the caller's project)
+#   - minReplicas 1: the sandbox idles workloads, and starting from 1 makes
+#     scale-up observable during a load test
+#   - CPU-only target. The memory-utilization metric was dropped: torch and
+#     the embedding model stay resident (~0.4-0.7Gi), which sits close to a
+#     70% memory target at idle and would pin the autoscaler near max.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: agentiq-api-hpa
+  labels:
+    app: agentiq-api
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: agentiq-api
+  minReplicas: 1
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 60

@@ -1,0 +1,72 @@
+# AgentIQ API — OpenShift deployment.
+#
+# Differences from k8s/deployment.yaml (vanilla-Kubernetes reference):
+#   - no Namespace object; deploys into the caller's existing project
+#   - no securityContext.runAsUser — the restricted-v2 SCC assigns a UID from
+#     the project's allocated range; a hardcoded UID fails admission
+#   - no PersistentVolumeClaim — the FAISS index is baked into the image and
+#     loaded read-only, so replicas need no shared RWX storage
+#   - image pulled from the in-cluster registry, populated by the BuildConfig
+#   - startupProbe added to cover the model + agent-graph warm-up on boot
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agentiq-api
+  labels:
+    app: agentiq-api
+    version: "1.0"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: agentiq-api
+  template:
+    metadata:
+      labels:
+        app: agentiq-api
+    spec:
+      securityContext:
+        runAsNonRoot: true
+      containers:
+        - name: agentiq-api
+          image: image-registry.openshift-image-registry.svc:5000/saduvamsikrishna513-dev/agentiq:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+              name: http
+          envFrom:
+            - secretRef:
+                name: agentiq-secrets
+          env:
+            - name: LOG_LEVEL
+              value: "INFO"
+            - name: ALLOWED_ORIGINS
+              value: "*"
+            - name: LANGCHAIN_TRACING_V2
+              value: "false"
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "800m"
+              memory: "1536Mi"
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            periodSeconds: 5
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            failureThreshold: 3
