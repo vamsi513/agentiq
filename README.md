@@ -75,8 +75,8 @@ exists to synthesise for conversational/general-knowledge queries).
 - **RAGAS evaluation** — answer relevance **0.73**, faithfulness **0.69** across 50 queries spanning retrieval, direct-answer, and web search routes
 - **PDF upload** (Streamlit app only, not the public Next.js demo) — users can upload their own PDFs; text is extracted, chunked, and indexed into FAISS at runtime
 - **LoRA fine-tuning notebook** — `notebooks/finetune_lora.ipynb` demonstrates full PEFT/LoRA fine-tuning on a custom Q&A dataset
-- **Kubernetes manifests** — `k8s/` directory contains Deployment, Service/Ingress, and HPA manifests as a deployment reference
-- **API rate limiting** — 30 requests/minute per IP enforced at the FastAPI layer; trusted-proxy-aware `X-Forwarded-For` handling for deployments behind nginx. In-process only — correct for the current single-instance deployment, but would need a shared store (Redis, etc.) to mean anything across multiple replicas
+- **Kubernetes / OpenShift manifests** — `k8s/` holds the vanilla-Kubernetes reference set; `k8s/openshift/` is the adapted set that has actually been deployed and verified on an OpenShift cluster (Route, SCC-compatible security context, on-cluster build, HPA). See [OpenShift deployment](#openshift-deployment)
+- **API rate limiting** — 30 requests/minute per IP enforced at the FastAPI layer; trusted-proxy-aware `X-Forwarded-For` handling for deployments behind a reverse proxy. In-process (per pod) — under the OpenShift HPA each replica counts independently, so a shared store (Redis, etc.) would be needed for a cluster-wide limit
 
 ---
 
@@ -97,7 +97,7 @@ exists to synthesise for conversational/general-knowledge queries).
 | Frontend | Streamlit 1.40.0 |
 | Evaluation | RAGAS |
 | Fine-tuning | PEFT / LoRA (Hugging Face) |
-| Container Orchestration | Kubernetes (Deployment + HPA + Ingress) |
+| Container Orchestration | Kubernetes reference manifests; deployed and verified on OpenShift (Deployment + HPA + Route) |
 | Testing | pytest |
 | Language | Python 3.11 |
 
@@ -224,9 +224,16 @@ agentiq/
 │   ├── schemas.py                  # Pydantic request/response models
 │   └── streaming.py                # SSE streaming helper
 ├── k8s/
-│   ├── deployment.yaml             # Kubernetes Deployment + PVC
+│   ├── deployment.yaml             # vanilla-Kubernetes reference: Deployment + PVC
 │   ├── service.yaml                # ClusterIP Service + Nginx Ingress
-│   └── hpa.yaml                    # HorizontalPodAutoscaler (2–8 replicas)
+│   ├── hpa.yaml                    # HorizontalPodAutoscaler (2–8 replicas)
+│   └── openshift/                  # the set actually deployed on OpenShift
+│       ├── deployment.yaml         # no fixed UID, no PVC, startupProbe
+│       ├── service.yaml            # Service + Route (edge TLS)
+│       ├── hpa.yaml                # HPA, CPU-only, 1–6 replicas
+│       ├── build.yaml              # ImageStream + binary Docker BuildConfig
+│       ├── loadtest-job.yaml       # distributed load generator for the HPA
+│       └── README.md               # deploy steps + every divergence from k8s/
 ├── notebooks/
 │   └── finetune_lora.ipynb         # LoRA/PEFT fine-tuning walkthrough
 ├── evaluation/
@@ -350,7 +357,7 @@ This section documents what's actually implemented and tested — not aspiration
 
 ### Rate Limiting
 
-- In-process token-bucket, 30 requests/minute per IP, bounded tracked-IP table (max 2000 entries). Correct for the current single-instance deployment; resets on restart and would not be shared across replicas if this were ever run behind the `k8s/` manifests (a deployment reference, not what's live). A multi-instance deployment would need a shared store (Redis or similar) — not implemented, documented here as a real future requirement rather than pretended away.
+- In-process token-bucket, 30 requests/minute per IP, bounded tracked-IP table (max 2000 entries). Resets on restart and is **per pod** — under the OpenShift HPA (1–6 replicas) each replica enforces its own 30/min, so the effective cluster-wide limit is `30 × replica count` and shifts as the deployment scales. A cluster-wide limit would need a shared store (Redis or similar) — not implemented, documented here as a real requirement rather than pretended away.
 - Verified firing under actual concurrent load (not just sequential unit tests): `scripts/load_test.py`'s dedicated limiter check fires 60 concurrent requests from one IP and confirms exactly 30 are allowed and 30 rejected with `429`.
 
 ### Observability
@@ -389,6 +396,19 @@ Throughput plateaus between 25 and 50 concurrent requests while latency roughly 
 **Real-provider load testing** (actual OpenAI/Tavily latency) is deliberately not automated — it costs money and can trip real rate limits. To do it safely: point `scripts/load_test.py`'s mocked calls at the real `_get_llm()`/`web_search()` functions instead, use low concurrency (2-3) and a small request count, and check your provider dashboards for cost/quota impact before scaling up.
 
 **Not claimed:** any specific production throughput ceiling, or that these numbers reflect real OpenAI/Tavily response times.
+
+### OpenShift Deployment
+
+The `k8s/openshift/` manifests were deployed to a live OpenShift 4.21 cluster (Red Hat Developer Sandbox — free, time-limited) and verified end-to-end. `k8s/openshift/README.md` has the full deploy sequence and a table of every divergence from `k8s/` with the reason. The short version of what OpenShift's constraints forced:
+
+- **Route, not Ingress** — no nginx ingress controller; the `Route` gets edge TLS and an HTTP→HTTPS redirect.
+- **No hardcoded UID** — the `restricted-v2` SCC assigns a UID from the namespace's range, so `runAsUser: 1000` fails admission. The image was reworked to run under an arbitrary UID (`chgrp 0 /app; chmod g=u`, numeric `USER`), confirmed running as UID `1006730000`, gid 0.
+- **No `ReadWriteMany` PVC** — the default storage class is `ReadWriteOnce`, which can't back multiple HPA replicas. The FAISS index is baked into the image and loaded read-only instead.
+- **On-cluster build** — a binary `BuildConfig` builds the image on the cluster (native arch, pushes to the internal registry). It needs an explicit `resources` block: the namespace LimitRange defaults a 1 GiB memory limit and the torch/scipy install OOM-kills the build pod without it — the first build failed exactly this way (exit 137) before the fix.
+
+**HPA verified under real load.** A distributed load-test `Job` (`k8s/openshift/loadtest-job.yaml`) — parallel pods, each with its own source IP and rate-limit budget, hitting the in-cluster Service — drove genuine CPU load. Observed via `oc get hpa -w` and `SuccessfulRescale` events: the deployment scaled **1 → 2 → 3 → 4** replicas as CPU crossed the 60% target, held at 4, then scaled **4 → 3 → 1** after load stopped (respecting the 5-minute scale-down window). ~1,371 requests, zero pod restarts, zero 5xx. A single client can't move the HPA — `/chat` is I/O-bound (mostly awaiting the LLM) and one IP is rate-limited to 30/min, which is why the load generator has to be distributed. Sustained load hits the OpenAI account's per-minute token limit (200K TPM) before any cluster limit; the app absorbed those 429s via its bounded retry and returned clean errors to a small fraction of requests.
+
+**Caveat:** the Developer Sandbox namespace is time-limited (~30 days, renewable) and idles workloads after inactivity, so there is no permanent public URL from this deployment — the two links under [Live Demo](#live-demo) are the always-on demos. This section documents that the manifests genuinely work on OpenShift and that the HPA genuinely autoscales, both reproducible from `k8s/openshift/README.md`.
 
 ---
 
