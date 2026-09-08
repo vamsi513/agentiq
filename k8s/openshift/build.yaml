@@ -1,0 +1,49 @@
+# AgentIQ API — ImageStream + binary Docker BuildConfig for OpenShift.
+#
+# The image is built on-cluster from the local working tree (binary input),
+# so the build host architecture doesn't matter and no external registry is
+# involved. Trigger it with:
+#
+#   oc apply -f k8s/openshift/build.yaml
+#   oc start-build agentiq --from-dir=. --follow
+#
+# The resources block is required: the namespace LimitRange defaults a
+# container to a 1Gi memory limit, and installing torch + the scientific
+# stack (scipy, scikit-learn, transformers) exceeds that and the build pod
+# is OOM-killed (exit 137). 8Gi is comfortably enough and fits the
+# compute-build quota (14Gi).
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: agentiq
+  labels:
+    app: agentiq-api
+spec:
+  lookupPolicy:
+    local: false
+---
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: agentiq
+  labels:
+    app: agentiq-api
+spec:
+  runPolicy: Serial
+  source:
+    type: Binary
+    binary: {}
+  strategy:
+    type: Docker
+    dockerStrategy: {}
+  output:
+    to:
+      kind: ImageStreamTag
+      name: agentiq:latest
+  resources:
+    requests:
+      cpu: "1"
+      memory: 2Gi
+    limits:
+      cpu: "2"
+      memory: 8Gi
