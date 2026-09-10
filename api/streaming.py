@@ -176,6 +176,7 @@ async def stream_agent_response(
 async def run_agent_sync(
     query: str,
     session_id: str,
+    allow_cache: bool = False,
 ) -> dict:
     """
     Run the agent graph and return the full result dict (non-streaming).
@@ -187,12 +188,24 @@ async def run_agent_sync(
     Args:
         query: User's question string.
         session_id: Conversation session ID.
+        allow_cache: When True (fresh session, no prior context to honour)
+                     and REDIS_URL is configured, an identical query is
+                     served from the Redis cache instead of re-running the
+                     graph. Multi-turn requests pass False.
 
     Returns:
         Dict with keys: ``answer``, ``sources``, ``route_decision``,
-        ``session_id``, ``turn_count``, ``retrieval_score``.
+        ``session_id``, ``turn_count``, ``retrieval_score``, ``cached``.
     """
+    from agent.cache import get_cached, set_cached
     from agent.graph import get_graph
+
+    if allow_cache:
+        cached = get_cached(query)
+        if cached is not None:
+            logger.info("cache_hit session=%s query='%.60s'", session_id, query)
+            return {**cached, "session_id": session_id, "cached": True}
+        logger.info("cache_miss session=%s query='%.60s'", session_id, query)
 
     graph = get_graph()
     config = get_thread_config(session_id)
@@ -204,7 +217,7 @@ async def run_agent_sync(
         messages = result.get("messages", [])
         answer = messages[-1].content if messages else "No response generated."
 
-        return {
+        response = {
             "answer": answer,
             "sources": result.get("sources", []),
             "context": result.get("context", ""),
@@ -212,7 +225,15 @@ async def run_agent_sync(
             "session_id": session_id,
             "turn_count": result.get("turn_count", 0),
             "retrieval_score": result.get("retrieval_score", 0.0),
+            "cached": False,
         }
+
+        # Cache only genuine answers on a fresh session -- not blocked
+        # queries and not error paths (those raise before reaching here).
+        if allow_cache and result.get("route_decision") != "blocked" and not result.get("error"):
+            set_cached(query, {k: v for k, v in response.items() if k != "session_id"})
+
+        return response
 
     except Exception:
         logger.exception("Agent sync run failed")

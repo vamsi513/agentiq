@@ -77,6 +77,15 @@ class Settings:
         self.api_host: str = os.getenv("API_HOST", "0.0.0.0")
         self.api_port: int = int(os.getenv("API_PORT", "8000"))
 
+        # Durable checkpoints + response cache (both opt-in).
+        # CHECKPOINT_DSN set  -> LangGraph uses PostgresSaver, so conversation
+        #   state survives a process restart. Unset -> in-process MemorySaver.
+        # REDIS_URL set -> repeated identical queries (on a fresh session) are
+        #   served from a Redis cache instead of re-running the graph.
+        self.checkpoint_dsn: str = os.getenv("CHECKPOINT_DSN", "")
+        self.redis_url: str = os.getenv("REDIS_URL", "")
+        self.cache_ttl_seconds: int = int(os.getenv("CACHE_TTL_SECONDS", "3600"))
+
         # Retrieval settings
         self.top_k_retrieval: int = int(os.getenv("TOP_K_RETRIEVAL", "5"))
         self.max_web_results: int = int(os.getenv("MAX_WEB_RESULTS", "5"))

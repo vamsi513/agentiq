@@ -135,6 +135,6 @@ def get_graph():
     """
     global _graph
     if _graph is None:
-        from agent.memory import get_memory
-        _graph = build_graph(checkpointer=get_memory())
+        from agent.memory import get_checkpointer
+        _graph = build_graph(checkpointer=get_checkpointer())
     return _graph

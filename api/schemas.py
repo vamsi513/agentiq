@@ -62,6 +62,8 @@ class ChatResponse(BaseModel):
         session_id: The session ID used (echoed back for client tracking).
         turn_count: How many turns have occurred in this session.
         retrieval_score: Top retrieval similarity score (0 if not retrieval).
+        cached: True if this answer was served from the Redis response
+                cache rather than a fresh graph run.
     """
 
     answer: str
@@ -70,6 +72,7 @@ class ChatResponse(BaseModel):
     session_id: str
     turn_count: int = 0
     retrieval_score: float = 0.0
+    cached: bool = False
 
 
 class HealthResponse(BaseModel):

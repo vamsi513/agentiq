@@ -1,0 +1,42 @@
+# Local supporting infrastructure for AgentIQ development.
+#
+# This is NOT the deployment topology -- the app is deployed to the EC2
+# shared host, an OpenShift sandbox, and Streamlit Cloud, none of which
+# use this file. It exists so `docker compose up` gives you Redis +
+# Postgres for the response cache and durable checkpoints.
+#
+# Point the app at these with:
+#   CHECKPOINT_DSN=postgresql://agentiq:agentiq@localhost:5433/agentiq
+#   REDIS_URL=redis://localhost:6380/0
+#
+# (Ports are offset from the defaults -- 5433/6380 -- so this doesn't
+# collide with a native postgres/redis already running on 5432/6379.)
+#
+# Local verification actually ran against native Homebrew redis + postgres
+# rather than this file -- Docker Desktop's Rosetta install fails on the
+# dev machine. The compose config is correct but was not exercised through
+# Docker; see scripts/verify_persistence_and_cache.py for what was.
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    command: ["redis-server", "--save", "60", "1", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: agentiq
+      POSTGRES_USER: agentiq
+      POSTGRES_PASSWORD: agentiq
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  redis_data:
+  postgres_data:

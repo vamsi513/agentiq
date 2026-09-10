@@ -112,6 +112,10 @@ async def lifespan(app: FastAPI):
         )
 
     try:
+        # Must run before get_graph() -- the graph captures the checkpointer
+        # at build time, and the Postgres saver needs an event loop to set up.
+        from agent.memory import init_checkpointer
+        await init_checkpointer()
         from agent.graph import get_graph
         get_graph()
         logger.info("Agent graph pre-warmed successfully.")
@@ -127,6 +131,8 @@ async def lifespan(app: FastAPI):
 
     yield  # Application runs here
 
+    from agent.memory import close_checkpointer
+    await close_checkpointer()
     logger.info("AgentIQ API shutting down.")
 
 
@@ -216,8 +222,13 @@ async def chat(request: ChatRequest, req: Request, _: None = Depends(_require_ap
     session_id = request.session_id or str(uuid.uuid4())
     logger.info("POST /chat | session=%s | query='%.60s'", session_id, request.query)
 
+    # Only cache when the client didn't supply a session_id: a fresh session
+    # has no prior conversation context, so an identical query is safe to
+    # serve from cache. Multi-turn requests always run the graph.
+    allow_cache = request.session_id is None
+
     try:
-        result = await run_agent_sync(request.query, session_id)
+        result = await run_agent_sync(request.query, session_id, allow_cache=allow_cache)
 
         sources = [
             SourceItem(
@@ -237,6 +248,7 @@ async def chat(request: ChatRequest, req: Request, _: None = Depends(_require_ap
             session_id=session_id,
             turn_count=result.get("turn_count", 0),
             retrieval_score=result.get("retrieval_score", 0.0),
+            cached=result.get("cached", False),
         )
 
     except Exception:

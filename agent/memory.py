@@ -1,13 +1,22 @@
 """
-agent/memory.py — MemorySaver setup and conversation thread management.
+agent/memory.py — checkpointer setup and conversation thread management.
 
-LangGraph's MemorySaver stores the full graph state (messages, context,
-routing decisions) as an in-memory checkpoint keyed by (thread_id, checkpoint_id).
-Each user session gets a stable thread_id so that multi-turn conversation
-history is preserved across graph invocations within the same process.
+LangGraph checkpoints the full graph state (messages, context, routing
+decisions) keyed by (thread_id, checkpoint_id). Each user session gets a
+stable thread_id so multi-turn history is preserved across invocations.
 
-For production deployments that need persistence across restarts, swap
-MemorySaver for SqliteSaver or PostgresSaver from langgraph.checkpoint.
+Two backends:
+- MemorySaver (default): in-process, lost on restart. Fine for the demo.
+- AsyncPostgresSaver: used when CHECKPOINT_DSN is set, so conversation
+  state survives a process restart. The graph runs via ``ainvoke`` /
+  ``astream_events``, so the *async* saver is required -- the sync
+  PostgresSaver raises NotImplementedError on the async code path.
+
+The Postgres saver needs an event loop to build (open the pool, run
+``setup()``), so ``init_checkpointer()`` is awaited once at API startup
+(see api/main.py's lifespan). ``get_checkpointer()`` stays sync and just
+returns whatever's been initialised, defaulting to MemorySaver -- so
+scripts and tests that never call ``init_checkpointer()`` still work.
 """
 
 import logging
@@ -15,28 +24,76 @@ import uuid
 
 from langgraph.checkpoint.memory import MemorySaver
 
+from config import settings
+
 logger = logging.getLogger(__name__)
 
-# ── Singleton checkpointer ────────────────────────────────────────────────────
-# One MemorySaver is shared across the entire process so all threads are
-# held in the same in-memory store.
-_memory_saver: MemorySaver | None = None
+# ── Process-wide singleton ───────────────────────────────────────────────────
+_checkpointer = None
+_pg_pool = None
 
 
-def get_memory() -> MemorySaver:
-    """
-    Return the process-wide MemorySaver singleton.
+async def init_checkpointer():
+    """Initialise the checkpointer, awaiting the async Postgres setup when
+    CHECKPOINT_DSN is configured. Idempotent. Falls back to MemorySaver if
+    Postgres is configured but unreachable."""
+    global _checkpointer, _pg_pool
+    if _checkpointer is not None:
+        return _checkpointer
 
-    Lazy-initialised on first call.
+    if not settings.checkpoint_dsn:
+        _checkpointer = MemorySaver()
+        logger.info("MemorySaver initialised (in-process checkpoints).")
+        return _checkpointer
 
-    Returns:
-        Shared MemorySaver instance used as the graph checkpointer.
-    """
-    global _memory_saver
-    if _memory_saver is None:
-        _memory_saver = MemorySaver()
-        logger.info("MemorySaver initialised.")
-    return _memory_saver
+    try:
+        from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+        from psycopg_pool import AsyncConnectionPool
+
+        _pg_pool = AsyncConnectionPool(
+            conninfo=settings.checkpoint_dsn,
+            max_size=20,
+            open=False,
+            kwargs={"autocommit": True, "prepare_threshold": 0},
+        )
+        await _pg_pool.open()
+        saver = AsyncPostgresSaver(_pg_pool)
+        await saver.setup()  # idempotent CREATE TABLE IF NOT EXISTS
+        _checkpointer = saver
+        logger.info("AsyncPostgresSaver initialised (durable checkpoints enabled).")
+    except Exception as exc:  # pragma: no cover - depends on a live DB
+        logger.warning(
+            "CHECKPOINT_DSN is set but the Postgres saver failed to init "
+            "(%s: %s); falling back to in-process MemorySaver.",
+            type(exc).__name__, exc,
+        )
+        _checkpointer = MemorySaver()
+    return _checkpointer
+
+
+def get_checkpointer():
+    """Return the process-wide checkpointer. If ``init_checkpointer()`` was
+    never awaited (scripts, tests), lazily create a MemorySaver."""
+    global _checkpointer
+    if _checkpointer is None:
+        _checkpointer = MemorySaver()
+        logger.info("MemorySaver initialised (in-process checkpoints, lazy).")
+    return _checkpointer
+
+
+async def close_checkpointer() -> None:
+    """Close the Postgres pool on shutdown. Safe to call unconditionally."""
+    global _checkpointer, _pg_pool
+    if _pg_pool is not None:
+        await _pg_pool.close()
+        _pg_pool = None
+    _checkpointer = None
+
+
+# Backwards-compatible alias -- existing callers import get_memory().
+def get_memory():
+    """Deprecated name for get_checkpointer(); kept so existing imports work."""
+    return get_checkpointer()
 
 
 def new_session_id() -> str:
@@ -64,11 +121,5 @@ def get_thread_config(session_id: str) -> dict:
 
     Returns:
         Dict with the ``configurable`` key set as LangGraph expects.
-
-    Example::
-
-        config = get_thread_config(session_id)
-        async for chunk in graph.astream(inputs, config=config):
-            ...
     """
     return {"configurable": {"thread_id": session_id}}

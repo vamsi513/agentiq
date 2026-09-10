@@ -42,6 +42,16 @@ python-dotenv>=1.2.2
 langsmith>=0.1.147
 structlog>=24.0
 
+# ── Optional: durable checkpoints + response cache ─────────────────────
+# All opt-in via config (CHECKPOINT_DSN / REDIS_URL). With neither set the
+# app falls back to the in-process MemorySaver and no caching, so the
+# deployed services are unaffected until those env vars are provided.
+# langgraph-checkpoint-postgres is pinned to the 1.x line to stay
+# compatible with langgraph 0.2.28's langgraph-checkpoint<2.0.0 constraint.
+langgraph-checkpoint-postgres==1.0.8
+psycopg[binary,pool]==3.3.5
+redis==8.1.0
+
 # ── Resilience (bounded retry with backoff for external API calls) ──────────
 # Already a transitive dep of langchain-core; pinned directly since
 # tools/web_search.py and agent/nodes.py now import it explicitly.
