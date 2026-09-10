@@ -366,6 +366,24 @@ This section documents what's actually implemented and tested — not aspiration
 - Per-stage timing: every graph node (`security`, `router`, `retriever`, `web_search`, `direct`, `generator`) logs a `stage_timing stage=<name> duration_ms=<n>` line, independent of which return path the node takes — enough to derive real p50/p95 per stage from production logs with a `grep`/`awk`, no tracing dependency.
 - Never logged: API keys, secrets, auth headers. Query content is logged truncated to 60-80 chars for traceability, not stored in full.
 
+#### OpenTelemetry metrics + Prometheus + Grafana
+
+`observability/metrics.py` wires OpenTelemetry into a Prometheus scrape endpoint at `GET /metrics` — auto-instrumented HTTP request count/duration/in-flight, plus custom instruments recorded from the code paths that matter:
+
+| Metric | What it tracks |
+|---|---|
+| `agentiq_turns_total{route,cached}` | completed agent turns |
+| `agentiq_turn_duration_seconds{route}` | end-to-end turn latency |
+| `agentiq_node_duration_seconds{node}` | per-graph-node latency |
+| `agentiq_tool_failures_total{tool,reason}` | tool fallbacks that fired |
+| `agentiq_cache_events_total{result}` | response-cache hit / miss |
+
+`observability/prometheus.yml` and `observability/grafana/` (datasource + dashboard provisioning, `dashboards/agentiq.json`) provide the full stack. Start it with `scripts/run_observability_stack.sh` (native Homebrew `prometheus` + `grafana` — Docker Desktop's Rosetta install fails on this arm64 machine, so that's what was used; `docker-compose.yml` has the equivalent Compose services, untested through Docker). The dashboard below was captured against a real local run driving mixed traffic, with the Tavily key deliberately broken so the tool-failure panel had data:
+
+![AgentIQ Grafana dashboard](screenshots/grafana-dashboard.png)
+
+Request rate (~3 req/s peak), agent turns by route, per-node latency, a 93.9% response-cache hit ratio, and the tool-failure panel stepping up as the broken Tavily key triggered fallbacks — all live from the running service.
+
 ### Evaluation
 
 - **Router accuracy**: 50/50 (100%) on the current labeled test set — full confusion matrix and per-route breakdown, not just an aggregate route count (see `evaluation/eval_runner.py::_compute_router_accuracy`). Read the methodology caveat under [Router accuracy](#router-accuracy-5050-100-on-the-current-dev-set) above before treating that number as a general reliability guarantee — it measures agreement with a dev set built alongside the router, not an independently frozen holdout.

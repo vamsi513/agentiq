@@ -150,6 +150,16 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# OpenTelemetry metrics + Prometheus /metrics endpoint. Optional add-on:
+# if the OTel packages aren't installed this is skipped with a warning
+# rather than failing to start.
+try:
+    from observability.metrics import setup_metrics
+
+    setup_metrics(app)
+except Exception as _exc:  # pragma: no cover - depends on optional deps
+    logger.warning("Metrics setup skipped: %s", _exc)
+
 # ── CORS ──────────────────────────────────────────────────────────────────────
 # allow_credentials=True is incompatible with allow_origins=["*"] per the CORS
 # spec — browsers reject credentialed requests to wildcard origins.

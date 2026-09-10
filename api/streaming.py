@@ -197,13 +197,25 @@ async def run_agent_sync(
         Dict with keys: ``answer``, ``sources``, ``route_decision``,
         ``session_id``, ``turn_count``, ``retrieval_score``, ``cached``.
     """
+    import time as _time
+
     from agent.cache import get_cached, set_cached
     from agent.graph import get_graph
+
+    _turn_start = _time.perf_counter()
+
+    def _record(route: str, cached: bool) -> None:
+        try:
+            from observability.metrics import record_turn
+            record_turn(route, cached, _time.perf_counter() - _turn_start)
+        except Exception:  # pragma: no cover - metrics are best-effort
+            pass
 
     if allow_cache:
         cached = get_cached(query)
         if cached is not None:
             logger.info("cache_hit session=%s query='%.60s'", session_id, query)
+            _record(cached.get("route_decision", "direct"), cached=True)
             return {**cached, "session_id": session_id, "cached": True}
         logger.info("cache_miss session=%s query='%.60s'", session_id, query)
 
@@ -233,6 +245,7 @@ async def run_agent_sync(
         if allow_cache and result.get("route_decision") != "blocked" and not result.get("error"):
             set_cached(query, {k: v for k, v in response.items() if k != "session_id"})
 
+        _record(response["route_decision"], cached=False)
         return response
 
     except Exception:

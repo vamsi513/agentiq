@@ -265,6 +265,11 @@ def _fallback_result(query: str, reason: str = "Search unavailable") -> dict[str
         Single result dict with ``is_fallback=True`` flag.
     """
     logger.warning("Returning fallback search result. Reason: %s", reason)
+    try:
+        from observability.metrics import record_tool_failure
+        record_tool_failure("web_search", reason)
+    except Exception:  # pragma: no cover - metrics are best-effort
+        pass
     return {
         "title": "Web Search Unavailable",
         "url": "",

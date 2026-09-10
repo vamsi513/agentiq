@@ -50,6 +50,15 @@ def _timed(stage: str):
     moment any node became async (web_search_node did, to support Tavily's
     genuinely-cancellable timeout; see tools/web_search.py)."""
 
+    def _emit(start: float) -> None:
+        elapsed = time.perf_counter() - start
+        logger.info("stage_timing stage=%s duration_ms=%.1f", stage, elapsed * 1000)
+        try:
+            from observability.metrics import record_node
+            record_node(stage, elapsed)
+        except Exception:  # pragma: no cover - metrics are best-effort
+            pass
+
     def decorator(fn):
         if asyncio.iscoroutinefunction(fn):
             @functools.wraps(fn)
@@ -58,8 +67,7 @@ def _timed(stage: str):
                 try:
                     return await fn(*args, **kwargs)
                 finally:
-                    duration_ms = (time.perf_counter() - start) * 1000
-                    logger.info("stage_timing stage=%s duration_ms=%.1f", stage, duration_ms)
+                    _emit(start)
 
             return async_wrapper
 
@@ -69,8 +77,7 @@ def _timed(stage: str):
             try:
                 return fn(*args, **kwargs)
             finally:
-                duration_ms = (time.perf_counter() - start) * 1000
-                logger.info("stage_timing stage=%s duration_ms=%.1f", stage, duration_ms)
+                _emit(start)
 
         return wrapper
 

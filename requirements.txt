@@ -42,6 +42,14 @@ python-dotenv>=1.2.2
 langsmith>=0.1.147
 structlog>=24.0
 
+# OpenTelemetry metrics -> Prometheus /metrics endpoint (observability/
+# metrics.py). Safe to ship everywhere: it only adds an endpoint and
+# some counters; nothing scrapes it unless a Prometheus is pointed at it.
+opentelemetry-sdk==1.44.0
+opentelemetry-instrumentation-fastapi==0.65b0
+opentelemetry-exporter-prometheus==0.65b0
+prometheus-client==0.26.0
+
 # ── Optional: durable checkpoints + response cache ─────────────────────
 # All opt-in via config (CHECKPOINT_DSN / REDIS_URL). With neither set the
 # app falls back to the in-process MemorySaver and no caching, so the

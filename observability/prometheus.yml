@@ -1,0 +1,14 @@
+# Prometheus scrape config for a local AgentIQ instance.
+#   prometheus --config.file=observability/prometheus.yml
+# Assumes the API is running on localhost:8000 with the /metrics endpoint
+# from observability/metrics.py mounted.
+
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  - job_name: agentiq
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["localhost:8000"]

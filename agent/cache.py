@@ -69,11 +69,22 @@ def get_cached(query: str) -> dict | None:
         logger.warning("Redis GET failed (%s); treating as cache miss.", exc)
         return None
     if raw is None:
+        _record("miss")
         return None
     try:
-        return json.loads(raw)
+        result = json.loads(raw)
+        _record("hit")
+        return result
     except json.JSONDecodeError:
         return None
+
+
+def _record(result: str) -> None:
+    try:
+        from observability.metrics import record_cache_event
+        record_cache_event(result)
+    except Exception:  # pragma: no cover - metrics are best-effort
+        pass
 
 
 def set_cached(query: str, result: dict) -> None:
