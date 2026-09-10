@@ -12,6 +12,7 @@ Run locally:
 
 import collections
 import hmac
+import os
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -33,7 +34,10 @@ logger = structlog.get_logger(__name__)
 # ever actually run behind the k8s HPA manifests in k8s/ (those are a
 # deployment reference, not what's live). A multi-replica deployment would
 # need a shared store (Redis, etc.) for this to mean anything.
-_RATE_LIMIT = 30
+# Per-IP request cap. Overridable via RATE_LIMIT_PER_MIN -- mainly so a
+# local load test (every request from 127.0.0.1) isn't throttled to
+# nothing; production leaves the default.
+_RATE_LIMIT = int(os.getenv("RATE_LIMIT_PER_MIN", "30"))
 _RATE_WINDOW = 60.0
 _MAX_TRACKED_IPS = 2000
 _rate_counters: dict[str, collections.deque] = {}

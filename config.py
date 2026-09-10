@@ -86,6 +86,13 @@ class Settings:
         self.redis_url: str = os.getenv("REDIS_URL", "")
         self.cache_ttl_seconds: int = int(os.getenv("CACHE_TTL_SECONDS", "3600"))
 
+        # Load-testing only (all default off): swap the LLM and Tavily for
+        # deterministic in-process fakes so a run costs nothing and hits no
+        # rate limits. See agent/loadtest_mocks.py.
+        self.mock_llm: bool = os.getenv("AGENTIQ_MOCK_LLM", "").lower() in ("1", "true", "yes")
+        self.mock_tavily: bool = os.getenv("AGENTIQ_MOCK_TAVILY", "").lower() in ("1", "true", "yes")
+        self.mock_fail_pct: float = float(os.getenv("AGENTIQ_MOCK_FAIL_PCT", "0") or "0")
+
         # Retrieval settings
         self.top_k_retrieval: int = int(os.getenv("TOP_K_RETRIEVAL", "5"))
         self.max_web_results: int = int(os.getenv("MAX_WEB_RESULTS", "5"))

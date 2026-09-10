@@ -100,6 +100,9 @@ _LLM_MAX_RETRIES = 2
 
 def _get_llm() -> ChatOpenAI:
     global _llm
+    if settings.mock_llm:
+        from agent.loadtest_mocks import FakeChatModel
+        return FakeChatModel()
     if _llm is None:
         _llm = ChatOpenAI(
             model=settings.openai_model,

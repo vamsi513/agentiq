@@ -136,6 +136,12 @@ def _build_client():
     Returns:
         AsyncTavilyClient instance, or None if TAVILY_API_KEY is not set.
     """
+    # `is True` (not just truthy) so a MagicMock-patched settings object in
+    # the web_search tests doesn't accidentally select the fake client.
+    if getattr(settings, "mock_tavily", False) is True:
+        from agent.loadtest_mocks import FakeTavilyClient
+        logger.warning("AGENTIQ_MOCK_TAVILY is set — using the in-process fake search client.")
+        return FakeTavilyClient()
     if not settings.is_tavily_configured():
         logger.warning("TAVILY_API_KEY not set — web search is disabled.")
         return None

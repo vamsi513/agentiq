@@ -45,3 +45,22 @@ def test_setup_mounts_metrics_endpoint_with_custom_instruments():
     assert "agentiq_turns_total" in body
     assert "agentiq_cache_events_total" in body
     assert "agentiq_tool_failures_total" in body
+
+
+def test_loadtest_mocks_route_from_user_query_not_system_prompt():
+    """FakeChatModel must route from the user's query, not the routing
+    system prompt (which lists example keywords for every route)."""
+    from agent.loadtest_mocks import FakeChatModel
+
+    ROUTER_SYS = "You are a query routing classifier ... web_search: news, prices, weather ..."
+    m = FakeChatModel()
+
+    def route(q):
+        return m.invoke([
+            {"role": "system", "content": ROUTER_SYS},
+            {"role": "user", "content": f"Query: {q}"},
+        ]).content
+
+    assert route("what is retrieval augmented generation") == "retrieval"
+    assert route("hello there") == "direct"
+    assert route("latest AI news today") == "web_search"
