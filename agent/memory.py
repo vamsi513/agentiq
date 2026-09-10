@@ -108,18 +108,31 @@ def new_session_id() -> str:
     return session_id
 
 
+# The graph is a linear DAG -- security -> router -> (one of retriever /
+# web_search / direct) -> generator -> END -- so a normal turn is 4
+# super-steps. There is no agentic tool-calling loop that could run away.
+# 8 is generous headroom over that while still hard-stopping any
+# pathological cycle (a mis-wired edge, a future change that adds a loop)
+# with LangGraph's GraphRecursionError instead of spinning until the
+# process is killed. LangGraph's own default is 25.
+_RECURSION_LIMIT = 8
+
+
 def get_thread_config(session_id: str) -> dict:
     """
     Build the LangGraph ``config`` dict required for checkpointed invocation.
 
     Pass the returned dict as the ``config`` argument to ``graph.invoke()``
     or ``graph.astream()`` to associate the run with a specific conversation
-    thread.
+    thread. Carries an explicit ``recursion_limit`` as a hard step cap.
 
     Args:
         session_id: Stable identifier for the conversation session.
 
     Returns:
-        Dict with the ``configurable`` key set as LangGraph expects.
+        Dict with ``recursion_limit`` and the ``configurable`` thread key.
     """
-    return {"configurable": {"thread_id": session_id}}
+    return {
+        "recursion_limit": _RECURSION_LIMIT,
+        "configurable": {"thread_id": session_id},
+    }

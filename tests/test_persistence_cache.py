@@ -33,9 +33,11 @@ class TestCheckpointerFallback:
             m = _fresh_memory_module()
             assert m.get_memory() is m.get_checkpointer()
 
-    def test_thread_config_shape_unchanged(self):
+    def test_thread_config_carries_thread_id_and_recursion_limit(self):
         m = _fresh_memory_module()
-        assert m.get_thread_config("abc") == {"configurable": {"thread_id": "abc"}}
+        cfg = m.get_thread_config("abc")
+        assert cfg["configurable"]["thread_id"] == "abc"
+        assert isinstance(cfg["recursion_limit"], int) and cfg["recursion_limit"] >= 4
 
 
 class TestResponseCacheNoOp:

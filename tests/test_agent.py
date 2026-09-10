@@ -121,13 +121,14 @@ class TestRouterNode:
         assert result["route_decision"] == "direct"
 
     def test_sanitises_unexpected_llm_output(self):
-        """Unknown LLM output is sanitised to 'retrieval' (safe default)."""
+        """Unknown LLM output is sanitised to 'direct' — the safe default
+        that invokes no tool at all (sanitize_route in agent/state.py)."""
         from agent.nodes import router_node
 
         with patch("agent.nodes._get_llm", return_value=self._mock_llm_response("nonsense")):
             result = router_node(_base_state())
 
-        assert result["route_decision"] == "retrieval"
+        assert result["route_decision"] == "direct"
 
     def test_strips_whitespace_and_lowercases(self):
         """Router strips whitespace and lowercases the LLM output."""

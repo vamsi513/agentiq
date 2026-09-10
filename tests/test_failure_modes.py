@@ -277,9 +277,10 @@ class TestMalformedRequests:
 # ── Router produces an unexpected value ───────────────────────────────────────
 
 class TestRouterInvalidOutput:
-    def test_unrecognized_llm_route_output_defaults_to_retrieval(self):
-        """router_node sanitizes unexpected LLM output rather than passing
-        it through unchecked -- confirms the existing safety net."""
+    def test_unrecognized_llm_route_output_defaults_to_direct(self):
+        """router_node sanitizes unexpected LLM output to 'direct' -- the
+        route that invokes no tool, so a hallucinated or injected router
+        response can't trigger retrieval or a web search."""
         from agent.nodes import router_node
         from langchain_core.messages import AIMessage, HumanMessage
 
@@ -289,7 +290,7 @@ class TestRouterInvalidOutput:
         with patch("agent.nodes._get_llm", return_value=mock_llm):
             result = router_node({"messages": [HumanMessage(content="test")]})
 
-        assert result["route_decision"] == "retrieval"
+        assert result["route_decision"] == "direct"
 
     def test_graph_conditional_edge_never_crashes_on_unknown_route(self):
         from agent.graph import _route_decision

@@ -22,23 +22,32 @@ from typing import Literal
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 
-from agent.state import AgentState
+from agent.state import AgentState, sanitize_route
 
 logger = logging.getLogger(__name__)
 
 
 # ── Routing helper ────────────────────────────────────────────────────────────
 
+# route_decision string -> graph node name. Only these three edges exist,
+# so a corrupted or hallucinated route_decision can never reach a node
+# outside this map -- sanitize_route() collapses anything unrecognised to
+# "direct" before we even get here, and _ROUTE_TO_NODE.get(..., "direct")
+# is a second backstop.
+_ROUTE_TO_NODE = {
+    "retrieval": "retriever",
+    "web_search": "web_search",
+    "direct": "direct",
+}
+
+
 def _route_decision(
     state: AgentState,
 ) -> Literal["retriever", "web_search", "direct"]:
-    decision = state.get("route_decision", "direct")
-    logger.debug("Routing to: %s", decision)
-    if decision == "retrieval":
-        return "retriever"
-    if decision == "web_search":
-        return "web_search"
-    return "direct"
+    decision = sanitize_route(state.get("route_decision", "direct"))
+    node = _ROUTE_TO_NODE.get(decision, "direct")
+    logger.debug("Routing to node: %s (decision=%s)", node, decision)
+    return node
 
 
 def _security_gate(state: AgentState) -> Literal["blocked", "continue"]:

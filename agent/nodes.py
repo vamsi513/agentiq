@@ -25,7 +25,7 @@ from langchain_core.messages import AIMessage, HumanMessage
 from langchain_openai import ChatOpenAI
 
 from agent.security import SecurityAction, evaluate_query
-from agent.state import AgentState
+from agent.state import AgentState, sanitize_route
 from config import settings
 
 logger = logging.getLogger(__name__)
@@ -208,17 +208,12 @@ def router_node(state: AgentState) -> dict[str, Any]:
                 {"role": "user", "content": f"Query: {query}"},
             ]
         )
-        decision_raw = response.content.strip().lower()
-
-        # Sanitise — only accept known values
-        if decision_raw in {"retrieval", "web_search", "direct"}:
-            decision = decision_raw
-        else:
+        decision_raw = response.content
+        decision = sanitize_route(decision_raw)
+        if decision != str(decision_raw).strip().lower():
             logger.warning(
-                "Router returned unexpected value '%s', defaulting to retrieval.",
-                decision_raw,
+                "Router output %r sanitised to %r.", decision_raw, decision,
             )
-            decision = "retrieval"
 
     except Exception:
         logger.exception("Router LLM call failed — defaulting to direct.")

@@ -17,6 +17,34 @@ from typing import Annotated, Any
 from langchain_core.messages import BaseMessage
 from typing_extensions import TypedDict
 
+# ── Tool / route allowlist ───────────────────────────────────────────────────
+# The only routes the router may pick and the only nodes the conditional edge
+# will dispatch to. AgentIQ has no dynamic, LLM-named tool calling -- the
+# router emits one of these three strings and nothing else can reach a tool.
+# Single source of truth: agent/nodes.py's router and agent/graph.py's
+# conditional edge both go through sanitize_route().
+ALLOWED_ROUTES: frozenset[str] = frozenset({"retrieval", "web_search", "direct"})
+_DEFAULT_ROUTE = "direct"
+
+
+def sanitize_route(raw: object) -> str:
+    """Coerce an arbitrary router output to an allowed route.
+
+    Exact match wins. Otherwise, if the raw text *contains* exactly one
+    allowed route as a token, take that (handles "route: web_search" or a
+    trailing period). Anything ambiguous or unrecognised -- including a
+    non-string, an injection attempt, or a hallucinated tool name -- falls
+    back to the safe default rather than being dispatched.
+    """
+    if isinstance(raw, str):
+        text = raw.strip().lower()
+        if text in ALLOWED_ROUTES:
+            return text
+        hits = {route for route in ALLOWED_ROUTES if route in text}
+        if len(hits) == 1:
+            return next(iter(hits))
+    return _DEFAULT_ROUTE
+
 
 class AgentState(TypedDict):
     """
