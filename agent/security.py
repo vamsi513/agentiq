@@ -9,9 +9,13 @@ attacker. What this module actually does:
 - Bounds input size as a defensive backstop (the primary bound is
   ChatRequest.query's max_length=2000 in api/schemas.py; this re-checks
   in case the function is ever called from a path that bypasses that).
-- Flags known instruction-override phrasing (e.g. "ignore previous
-  instructions", "reveal your system prompt") via pattern matching --
-  one signal among several below, not a standalone keyword blocklist.
+- Matches instruction-override phrasing via pattern matching. Near-
+  unambiguous constructions ("ignore previous instructions", "forget
+  your instructions", fake "<<<SYSTEM:" markers, "...then do what it
+  says" indirect framing) score straight to BLOCK -- these essentially
+  never occur in a genuine question. Softer signals ("reveal your
+  system prompt", "act as if you have no restrictions") are one signal
+  among several and combine into the score rather than blocking alone.
 - Flags obfuscation signals: abnormal repeated-character padding, and
   long encoded-looking blobs (base64/hex) that could smuggle content
   past casual review.
@@ -77,19 +81,37 @@ class SecurityDecision:
 # fed into the combined score below -- see evaluate_query. Not exhaustive,
 # and deliberately not a giant list of arbitrary "suspicious words": every
 # pattern targets a specific, well-known override construction.
-_OVERRIDE_PATTERNS = [
+# Strong, near-unambiguous override constructions. A single match here is
+# on its own enough to BLOCK (weight == _BLOCK_THRESHOLD) -- these phrasings
+# essentially never occur in a genuine question.
+_STRONG_OVERRIDE_PATTERNS = [
     re.compile(p, re.IGNORECASE)
     for p in [
         r"ignore (all |any )?(previous|prior|above|earlier) instructions",
         r"disregard (the |your |all )?(system|previous|prior) (prompt|instructions?)",
+        r"forget (everything|all|your) (you|that|prior|previous|instructions)",
         r"you are (now |)(DAN|no longer (bound|restricted))",
-        r"reveal (your|the) (system )?(prompt|instructions)",
-        r"(print|show|repeat) (your|the) (system )?(prompt|instructions)",
-        r"act as (if )?you (have no|have|had) restrictions",
         r"\bjailbreak\b",
         r"\bdeveloper mode\b",
+        # Fake in-band system/instruction markers used to smuggle a new prompt.
+        r"<<<\s*system\s*:",
+        r"^\s*\[?system\]?\s*:",
+        r"\[/?INST\]",
+        # "translate/summarize X, then do what it says" -- indirect framing
+        # that tries to launder an instruction through a benign-looking task.
+        r"then (do|follow|execute) what (it|the text|that) says",
+    ]
+]
+
+_OVERRIDE_PATTERNS = [
+    re.compile(p, re.IGNORECASE)
+    for p in [
+        r"reveal (your|the) (system )?(prompt|instructions)",
+        r"(print|show|repeat) (your|the) (system )?(prompt|instructions)",
+        r"repeat (everything|all|the text) (above|before|prior)",
+        r"act as (if )?you (have no|have|had) restrictions",
         r"new instructions?\s*:",
-        r"forget (everything|all) (you|that)",
+        r"no (content|safety) (rules|guidelines|restrictions)",
     ]
 ]
 
@@ -149,6 +171,12 @@ def evaluate_query(query: str) -> SecurityDecision:
     if len(query) > _MAX_QUERY_LENGTH:
         reasons.append(f"query exceeds max length ({len(query)} > {_MAX_QUERY_LENGTH})")
         score += 3
+
+    strong_hits = [p.pattern for p in _STRONG_OVERRIDE_PATTERNS if p.search(query)]
+    if strong_hits:
+        reasons.append(f"strong instruction-override construction matched ({len(strong_hits)} pattern(s))")
+        # A single strong match blocks on its own.
+        score += _BLOCK_THRESHOLD * len(strong_hits)
 
     override_hits = [p.pattern for p in _OVERRIDE_PATTERNS if p.search(query)]
     if override_hits:
