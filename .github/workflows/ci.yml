@@ -77,12 +77,6 @@ jobs:
       SG_ID: sg-0c7f5612c7d11e8f4
 
     steps:
-      - name: Debug AWS credential (temporary)
-        run: |
-          echo "access key id length: ${#AWS_ACCESS_KEY_ID} (expect 20)"
-          echo "secret key length:    ${#AWS_SECRET_ACCESS_KEY} (expect 40)"
-          aws sts get-caller-identity || echo "get-caller-identity failed"
-
       - name: Allow this runner's IP through SSH
         run: |
           RUNNER_IP="$(curl -s https://checkip.amazonaws.com)/32"
