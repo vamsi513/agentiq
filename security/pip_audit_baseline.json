@@ -5,6 +5,11 @@
     {
       "package": "langchain",
       "id": "PYSEC-2026-2192",
+      "aliases": [
+        "GHSA-gr75-jv2w-4656",
+        "CVE-2026-55443",
+        "PYSEC-2026-2556"
+      ],
       "fix_versions": [
         "1.3.9"
       ]
@@ -12,6 +17,10 @@
     {
       "package": "langchain",
       "id": "PYSEC-2026-2192",
+      "aliases": [
+        "GHSA-gr75-jv2w-4656",
+        "CVE-2026-55443"
+      ],
       "fix_versions": [
         "1.3.9"
       ]
@@ -19,6 +28,10 @@
     {
       "package": "langchain",
       "id": "PYSEC-2026-2555",
+      "aliases": [
+        "GHSA-3644-q5cj-c5c7",
+        "CVE-2026-45134"
+      ],
       "fix_versions": [
         "0.3.30"
       ]
@@ -26,6 +39,10 @@
     {
       "package": "langchain-community",
       "id": "PYSEC-2026-1515",
+      "aliases": [
+        "CVE-2025-6984",
+        "GHSA-pc6w-59fv-rh23"
+      ],
       "fix_versions": [
         "0.3.27"
       ]
@@ -33,6 +50,10 @@
     {
       "package": "langchain-community",
       "id": "PYSEC-2026-1515",
+      "aliases": [
+        "CVE-2025-6984",
+        "GHSA-pc6w-59fv-rh23"
+      ],
       "fix_versions": [
         "0.3.27"
       ]
@@ -40,6 +61,10 @@
     {
       "package": "langchain-core",
       "id": "PYSEC-2026-1518",
+      "aliases": [
+        "CVE-2025-65106",
+        "GHSA-6qv9-48xg-fc7f"
+      ],
       "fix_versions": [
         "0.3.80",
         "1.0.7"
@@ -48,6 +73,10 @@
     {
       "package": "langchain-core",
       "id": "PYSEC-2026-1518",
+      "aliases": [
+        "CVE-2025-65106",
+        "GHSA-6qv9-48xg-fc7f"
+      ],
       "fix_versions": [
         "0.3.80",
         "1.0.7"
@@ -56,6 +85,10 @@
     {
       "package": "langchain-core",
       "id": "PYSEC-2026-2193",
+      "aliases": [
+        "GHSA-qh6h-p6c9-ff54",
+        "CVE-2026-34070"
+      ],
       "fix_versions": [
         "1.2.22"
       ]
@@ -63,6 +96,10 @@
     {
       "package": "langchain-core",
       "id": "PYSEC-2026-2562",
+      "aliases": [
+        "GHSA-2g6r-c272-w58r",
+        "CVE-2026-26013"
+      ],
       "fix_versions": [
         "1.2.11"
       ]
@@ -70,6 +107,10 @@
     {
       "package": "langchain-core",
       "id": "PYSEC-2026-2562",
+      "aliases": [
+        "GHSA-2g6r-c272-w58r",
+        "CVE-2026-26013"
+      ],
       "fix_versions": [
         "1.2.11"
       ]
@@ -77,6 +118,10 @@
     {
       "package": "langchain-core",
       "id": "PYSEC-2026-2563",
+      "aliases": [
+        "GHSA-926x-3r5x-gfhw",
+        "CVE-2026-40087"
+      ],
       "fix_versions": [
         "0.3.84",
         "1.2.28"
@@ -85,6 +130,10 @@
     {
       "package": "langchain-core",
       "id": "PYSEC-2026-2563",
+      "aliases": [
+        "GHSA-926x-3r5x-gfhw",
+        "CVE-2026-40087"
+      ],
       "fix_versions": [
         "0.3.84",
         "1.2.28"
@@ -93,6 +142,10 @@
     {
       "package": "langchain-core",
       "id": "PYSEC-2026-2564",
+      "aliases": [
+        "CVE-2026-44843",
+        "GHSA-pjwx-r37v-7724"
+      ],
       "fix_versions": [
         "0.3.85",
         "1.3.3"
@@ -101,6 +154,10 @@
     {
       "package": "langchain-core",
       "id": "PYSEC-2026-2564",
+      "aliases": [
+        "CVE-2026-44843",
+        "GHSA-pjwx-r37v-7724"
+      ],
       "fix_versions": [
         "0.3.85",
         "1.3.3"
@@ -109,6 +166,10 @@
     {
       "package": "langchain-core",
       "id": "PYSEC-2026-373",
+      "aliases": [
+        "GHSA-c67j-w6g6-q2cm",
+        "CVE-2025-68664"
+      ],
       "fix_versions": [
         "0.3.81",
         "1.2.5"
@@ -117,6 +178,10 @@
     {
       "package": "langchain-core",
       "id": "PYSEC-2026-373",
+      "aliases": [
+        "GHSA-c67j-w6g6-q2cm",
+        "CVE-2025-68664"
+      ],
       "fix_versions": [
         "0.3.81",
         "1.2.5"
@@ -125,6 +190,10 @@
     {
       "package": "langchain-openai",
       "id": "PYSEC-2026-76",
+      "aliases": [
+        "GHSA-r7w7-9xr2-qq2r",
+        "CVE-2026-41488"
+      ],
       "fix_versions": [
         "1.1.14"
       ]
@@ -132,6 +201,10 @@
     {
       "package": "langchain-openai",
       "id": "PYSEC-2026-76",
+      "aliases": [
+        "GHSA-r7w7-9xr2-qq2r",
+        "CVE-2026-41488"
+      ],
       "fix_versions": [
         "1.1.14"
       ]
@@ -139,6 +212,10 @@
     {
       "package": "langchain-text-splitters",
       "id": "PYSEC-2026-1520",
+      "aliases": [
+        "CVE-2025-6985",
+        "GHSA-m42m-m8cr-8m58"
+      ],
       "fix_versions": [
         "0.3.9"
       ]
@@ -146,6 +223,10 @@
     {
       "package": "langchain-text-splitters",
       "id": "PYSEC-2026-1520",
+      "aliases": [
+        "CVE-2025-6985",
+        "GHSA-m42m-m8cr-8m58"
+      ],
       "fix_versions": [
         "0.3.9"
       ]
@@ -153,6 +234,10 @@
     {
       "package": "langchain-text-splitters",
       "id": "PYSEC-2026-77",
+      "aliases": [
+        "CVE-2026-41481",
+        "GHSA-fv5p-p927-qmxr"
+      ],
       "fix_versions": [
         "1.1.2"
       ]
@@ -160,6 +245,10 @@
     {
       "package": "langchain-text-splitters",
       "id": "PYSEC-2026-77",
+      "aliases": [
+        "CVE-2026-41481",
+        "GHSA-fv5p-p927-qmxr"
+      ],
       "fix_versions": [
         "1.1.2"
       ]
@@ -167,6 +256,10 @@
     {
       "package": "langgraph",
       "id": "PYSEC-2026-2194",
+      "aliases": [
+        "CVE-2026-48776",
+        "GHSA-w39p-vh2g-g8g5"
+      ],
       "fix_versions": [
         "0.3.15"
       ]
@@ -174,6 +267,10 @@
     {
       "package": "langgraph",
       "id": "PYSEC-2026-83",
+      "aliases": [
+        "CVE-2026-28277",
+        "GHSA-g48c-2wqr-h844"
+      ],
       "fix_versions": [
         "1.0.10"
       ]
@@ -181,6 +278,10 @@
     {
       "package": "langgraph",
       "id": "PYSEC-2026-83",
+      "aliases": [
+        "CVE-2026-28277",
+        "GHSA-g48c-2wqr-h844"
+      ],
       "fix_versions": [
         "1.0.10rc1"
       ]
@@ -188,6 +289,10 @@
     {
       "package": "langgraph-checkpoint",
       "id": "PYSEC-2026-1527",
+      "aliases": [
+        "GHSA-wwqv-p2pp-99h5",
+        "CVE-2025-64439"
+      ],
       "fix_versions": [
         "3.0.0"
       ]
@@ -195,6 +300,10 @@
     {
       "package": "langgraph-checkpoint",
       "id": "PYSEC-2026-1527",
+      "aliases": [
+        "GHSA-wwqv-p2pp-99h5",
+        "CVE-2025-64439"
+      ],
       "fix_versions": [
         "3.0.0"
       ]
@@ -202,6 +311,10 @@
     {
       "package": "langgraph-checkpoint",
       "id": "PYSEC-2026-2573",
+      "aliases": [
+        "CVE-2026-48775",
+        "GHSA-fjqc-hq36-qh5p"
+      ],
       "fix_versions": [
         "4.1.1"
       ]
@@ -209,6 +322,10 @@
     {
       "package": "langgraph-checkpoint",
       "id": "PYSEC-2026-2573",
+      "aliases": [
+        "CVE-2026-48775",
+        "GHSA-fjqc-hq36-qh5p"
+      ],
       "fix_versions": [
         "4.1.1"
       ]
@@ -216,6 +333,10 @@
     {
       "package": "langgraph-checkpoint",
       "id": "PYSEC-2026-2574",
+      "aliases": [
+        "CVE-2026-27794",
+        "GHSA-mhr3-j7m5-c7c9"
+      ],
       "fix_versions": [
         "4.0.0"
       ]
@@ -223,6 +344,10 @@
     {
       "package": "langgraph-checkpoint",
       "id": "PYSEC-2026-2574",
+      "aliases": [
+        "CVE-2026-27794",
+        "GHSA-mhr3-j7m5-c7c9"
+      ],
       "fix_versions": [
         "4.0.0"
       ]
@@ -230,6 +355,11 @@
     {
       "package": "langgraph-checkpoint-postgres",
       "id": "PYSEC-2026-3635",
+      "aliases": [
+        "PYSEC-2026-3636",
+        "CVE-2026-71433",
+        "GHSA-47pj-3jcm-6whg"
+      ],
       "fix_versions": [
         "3.1.1"
       ]
@@ -237,6 +367,10 @@
     {
       "package": "langgraph-checkpoint-postgres",
       "id": "PYSEC-2026-3635",
+      "aliases": [
+        "CVE-2026-71433",
+        "GHSA-47pj-3jcm-6whg"
+      ],
       "fix_versions": [
         "3.1.1"
       ]
@@ -244,6 +378,9 @@
     {
       "package": "langsmith",
       "id": "CVE-2026-59152",
+      "aliases": [
+        "GHSA-f4xh-w4cj-qxq8"
+      ],
       "fix_versions": [
         "0.8.18"
       ]
@@ -251,6 +388,12 @@
     {
       "package": "langsmith",
       "id": "PYSEC-2026-2555",
+      "aliases": [
+        "GHSA-3644-q5cj-c5c7",
+        "CVE-2026-45134",
+        "PYSEC-2026-2582",
+        "PYSEC-2026-2560"
+      ],
       "fix_versions": [
         "0.8.0"
       ]
@@ -258,6 +401,10 @@
     {
       "package": "langsmith",
       "id": "PYSEC-2026-2582",
+      "aliases": [
+        "GHSA-3644-q5cj-c5c7",
+        "CVE-2026-45134"
+      ],
       "fix_versions": [
         "0.8.0"
       ]
@@ -265,6 +412,10 @@
     {
       "package": "langsmith",
       "id": "PYSEC-2026-2583",
+      "aliases": [
+        "CVE-2026-41182",
+        "GHSA-rr7j-v2q5-chgv"
+      ],
       "fix_versions": [
         "0.7.31"
       ]
@@ -272,6 +423,10 @@
     {
       "package": "langsmith",
       "id": "PYSEC-2026-2583",
+      "aliases": [
+        "CVE-2026-41182",
+        "GHSA-rr7j-v2q5-chgv"
+      ],
       "fix_versions": [
         "0.7.31"
       ]
