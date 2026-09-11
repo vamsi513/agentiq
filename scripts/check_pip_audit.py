@@ -33,7 +33,7 @@ _BASELINE_PATH = Path(__file__).parent.parent / "security" / "pip_audit_baseline
 
 
 def _run_pip_audit() -> list[dict]:
-    """Run pip-audit and return a flat list of {package, id, fix_versions} dicts."""
+    """Run pip-audit and return a flat list of {package, id, aliases, fix_versions} dicts."""
     result = subprocess.run(
         ["pip-audit", "--format", "json"],
         capture_output=True,
@@ -56,9 +56,22 @@ def _run_pip_audit() -> list[dict]:
             found.append({
                 "package": dep["name"],
                 "id": vuln["id"],
+                # The same vulnerability is frequently tracked under more than
+                # one database (a PYSEC/GHSA/CVE id all referring to the same
+                # underlying issue). pip-audit's own choice of which one to
+                # surface as "id" isn't stable across runs -- one run reported
+                # a langsmith fix as CVE-2026-59152, the next as its alias
+                # GHSA-f4xh-w4cj-qxq8. Carrying aliases lets matching below
+                # recognize both as the same reviewed vulnerability.
+                "aliases": vuln.get("aliases", []),
                 "fix_versions": vuln.get("fix_versions", []),
             })
     return found
+
+
+def _identity(entry: dict) -> set[str]:
+    """All identifiers (primary id + known aliases) for one vulnerability."""
+    return {entry["id"], *entry.get("aliases", [])}
 
 
 def _load_baseline() -> dict:
@@ -78,17 +91,27 @@ def _write_baseline(entries: list[dict]) -> None:
 def main() -> None:
     found = _run_pip_audit()
     baseline = _load_baseline()
-    accepted = {(e["package"], e["id"]) for e in baseline["accepted_vulnerabilities"]}
+
+    # Per-package sets of accepted identities (id + aliases), so a finding
+    # matches an accepted entry if ANY of its ids/aliases overlap -- not just
+    # the one exact string that happened to be baselined.
+    accepted_by_package: dict[str, list[set[str]]] = {}
+    for e in baseline["accepted_vulnerabilities"]:
+        accepted_by_package.setdefault(e["package"], []).append(_identity(e))
 
     if "--update-baseline" in sys.argv:
         _write_baseline(found)
         print(f"Baseline updated with {len(found)} accepted vulnerabilities.")
         return
 
-    new_findings = [f for f in found if (f["package"], f["id"]) not in accepted]
+    def _is_accepted(f: dict) -> bool:
+        identities = accepted_by_package.get(f["package"], [])
+        return any(_identity(f) & accepted_ids for accepted_ids in identities)
+
+    new_findings = [f for f in found if not _is_accepted(f)]
 
     print(f"pip-audit found {len(found)} known vulnerabilities.")
-    print(f"{len(accepted)} are already in the reviewed baseline "
+    print(f"{len(found) - len(new_findings)} are already in the reviewed baseline "
           f"(reviewed {baseline.get('reviewed_date', 'unknown')}).")
 
     if new_findings:
