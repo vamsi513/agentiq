@@ -39,7 +39,13 @@ jobs:
         run: ruff check agent api config.py
 
       - name: Security scan
-        run: pip install pip-audit && python -m scripts.check_pip_audit
+        run: |
+          # Upgrade pip first -- otherwise pip-audit flags pip's own
+          # version (a build tool, not something the service ships), which
+          # is noise unrelated to this app's dependency tree.
+          pip install --upgrade pip
+          pip install pip-audit
+          python -m scripts.check_pip_audit
 
       - name: Build Docker image
         run: docker build -t agentiq-api:${{ github.sha }} .

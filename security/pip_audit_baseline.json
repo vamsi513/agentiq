@@ -1,11 +1,13 @@
 {
-  "_comment": "Known, accepted CVEs as of the review date below, tracked so CI blocks on any NEW vulnerability without silently ignoring the whole scan. Most entries here require a major-version bump (langgraph 0.2->1.x, langchain-core 0.3->1.x, streamlit 1.40->1.53+, starlette->1.x) that would need its own dedicated upgrade + regression pass, not a drive-by dependency bump. Re-run scripts/check_pip_audit.py --update-baseline after actually upgrading a package, and prune entries that no longer apply.",
-  "reviewed_date": "2026-08-27",
+  "_comment": "Known, accepted CVEs as of the review date below, tracked so CI blocks on any NEW vulnerability without silently ignoring the whole scan. Most entries here require a major-version bump (langgraph 0.2->1.x, langchain-core 0.3->1.x, streamlit 1.40->1.53+, starlette->1.x) that would need its own dedicated upgrade + regression pass, not a drive-by dependency bump. 2026-09-11 review added three CVEs from the Phase 3 dependency additions, all confirmed unreachable in this codebase and all locked behind the same langgraph 0.2->1.x / langchain 0.3->1.x major bump: langgraph-checkpoint-postgres PYSEC-2026-3635 (namespace LIKE-prefix leak in the BaseStore search/list_namespaces API -- AgentIQ uses AsyncPostgresSaver for checkpoints keyed by exact thread_id, never the Store namespace API); langsmith PYSEC-2026-2555 (unsafe deserialization of prompt manifests via pull_prompt/hub.pull -- all prompts here are inline string constants, never pulled from the Hub); langsmith CVE-2026-59152 (arbitrary file read via langsmith's ASGI TracingMiddleware -- not installed; tracing here is the env-var callback, off by default with no LANGCHAIN_API_KEY on the deployed instances). Re-run scripts/check_pip_audit.py --update-baseline after actually upgrading a package, and prune entries that no longer apply.",
+  "reviewed_date": "2026-09-11",
   "accepted_vulnerabilities": [
     {
-      "package": "diskcache",
-      "id": "PYSEC-2026-2447",
-      "fix_versions": []
+      "package": "langchain",
+      "id": "PYSEC-2026-2192",
+      "fix_versions": [
+        "1.3.9"
+      ]
     },
     {
       "package": "langchain",
@@ -26,6 +28,21 @@
       "id": "PYSEC-2026-1515",
       "fix_versions": [
         "0.3.27"
+      ]
+    },
+    {
+      "package": "langchain-community",
+      "id": "PYSEC-2026-1515",
+      "fix_versions": [
+        "0.3.27"
+      ]
+    },
+    {
+      "package": "langchain-core",
+      "id": "PYSEC-2026-1518",
+      "fix_versions": [
+        "0.3.80",
+        "1.0.7"
       ]
     },
     {
@@ -52,6 +69,21 @@
     },
     {
       "package": "langchain-core",
+      "id": "PYSEC-2026-2562",
+      "fix_versions": [
+        "1.2.11"
+      ]
+    },
+    {
+      "package": "langchain-core",
+      "id": "PYSEC-2026-2563",
+      "fix_versions": [
+        "0.3.84",
+        "1.2.28"
+      ]
+    },
+    {
+      "package": "langchain-core",
       "id": "PYSEC-2026-2563",
       "fix_versions": [
         "0.3.84",
@@ -64,6 +96,22 @@
       "fix_versions": [
         "0.3.85",
         "1.3.3"
+      ]
+    },
+    {
+      "package": "langchain-core",
+      "id": "PYSEC-2026-2564",
+      "fix_versions": [
+        "0.3.85",
+        "1.3.3"
+      ]
+    },
+    {
+      "package": "langchain-core",
+      "id": "PYSEC-2026-373",
+      "fix_versions": [
+        "0.3.81",
+        "1.2.5"
       ]
     },
     {
@@ -86,6 +134,13 @@
       "id": "PYSEC-2026-76",
       "fix_versions": [
         "1.1.14"
+      ]
+    },
+    {
+      "package": "langchain-text-splitters",
+      "id": "PYSEC-2026-1520",
+      "fix_versions": [
+        "0.3.9"
       ]
     },
     {
@@ -139,6 +194,20 @@
     },
     {
       "package": "langgraph-checkpoint",
+      "id": "PYSEC-2026-1527",
+      "fix_versions": [
+        "3.0.0"
+      ]
+    },
+    {
+      "package": "langgraph-checkpoint",
+      "id": "PYSEC-2026-2573",
+      "fix_versions": [
+        "4.1.1"
+      ]
+    },
+    {
+      "package": "langgraph-checkpoint",
       "id": "PYSEC-2026-2573",
       "fix_versions": [
         "4.1.1"
@@ -152,10 +221,38 @@
       ]
     },
     {
+      "package": "langgraph-checkpoint",
+      "id": "PYSEC-2026-2574",
+      "fix_versions": [
+        "4.0.0"
+      ]
+    },
+    {
+      "package": "langgraph-checkpoint-postgres",
+      "id": "PYSEC-2026-3635",
+      "fix_versions": [
+        "3.1.1"
+      ]
+    },
+    {
+      "package": "langgraph-checkpoint-postgres",
+      "id": "PYSEC-2026-3635",
+      "fix_versions": [
+        "3.1.1"
+      ]
+    },
+    {
       "package": "langsmith",
-      "id": "GHSA-f4xh-w4cj-qxq8",
+      "id": "CVE-2026-59152",
       "fix_versions": [
         "0.8.18"
+      ]
+    },
+    {
+      "package": "langsmith",
+      "id": "PYSEC-2026-2555",
+      "fix_versions": [
+        "0.8.0"
       ]
     },
     {
@@ -173,288 +270,10 @@
       ]
     },
     {
-      "package": "pillow",
-      "id": "PYSEC-2026-165",
+      "package": "langsmith",
+      "id": "PYSEC-2026-2583",
       "fix_versions": [
-        "12.2.0"
-      ]
-    },
-    {
-      "package": "pillow",
-      "id": "PYSEC-2026-165",
-      "fix_versions": [
-        "12.2.0"
-      ]
-    },
-    {
-      "package": "pillow",
-      "id": "PYSEC-2026-2249",
-      "fix_versions": [
-        "12.1.1"
-      ]
-    },
-    {
-      "package": "pillow",
-      "id": "PYSEC-2026-2250",
-      "fix_versions": [
-        "12.2.0"
-      ]
-    },
-    {
-      "package": "pillow",
-      "id": "PYSEC-2026-2251",
-      "fix_versions": [
-        "12.2.0"
-      ]
-    },
-    {
-      "package": "pillow",
-      "id": "PYSEC-2026-2252",
-      "fix_versions": [
-        "12.2.0"
-      ]
-    },
-    {
-      "package": "pillow",
-      "id": "PYSEC-2026-2253",
-      "fix_versions": [
-        "12.3.0"
-      ]
-    },
-    {
-      "package": "pillow",
-      "id": "PYSEC-2026-2253",
-      "fix_versions": [
-        "12.3.0"
-      ]
-    },
-    {
-      "package": "pillow",
-      "id": "PYSEC-2026-2254",
-      "fix_versions": [
-        "12.3.0"
-      ]
-    },
-    {
-      "package": "pillow",
-      "id": "PYSEC-2026-2254",
-      "fix_versions": [
-        "12.3.0"
-      ]
-    },
-    {
-      "package": "pillow",
-      "id": "PYSEC-2026-2255",
-      "fix_versions": [
-        "12.3.0"
-      ]
-    },
-    {
-      "package": "pillow",
-      "id": "PYSEC-2026-2255",
-      "fix_versions": [
-        "12.3.0"
-      ]
-    },
-    {
-      "package": "pillow",
-      "id": "PYSEC-2026-2256",
-      "fix_versions": [
-        "12.3.0"
-      ]
-    },
-    {
-      "package": "pillow",
-      "id": "PYSEC-2026-2256",
-      "fix_versions": [
-        "12.3.0"
-      ]
-    },
-    {
-      "package": "pillow",
-      "id": "PYSEC-2026-2257",
-      "fix_versions": [
-        "12.3.0"
-      ]
-    },
-    {
-      "package": "pillow",
-      "id": "PYSEC-2026-2874",
-      "fix_versions": [
-        "12.2.0"
-      ]
-    },
-    {
-      "package": "pillow",
-      "id": "PYSEC-2026-3451",
-      "fix_versions": [
-        "12.3.0"
-      ]
-    },
-    {
-      "package": "pillow",
-      "id": "PYSEC-2026-3451",
-      "fix_versions": [
-        "12.3.0"
-      ]
-    },
-    {
-      "package": "pillow",
-      "id": "PYSEC-2026-3453",
-      "fix_versions": [
-        "12.3.0"
-      ]
-    },
-    {
-      "package": "pillow",
-      "id": "PYSEC-2026-3453",
-      "fix_versions": [
-        "12.3.0"
-      ]
-    },
-    {
-      "package": "pillow",
-      "id": "PYSEC-2026-3454",
-      "fix_versions": [
-        "12.3.0"
-      ]
-    },
-    {
-      "package": "pillow",
-      "id": "PYSEC-2026-3493",
-      "fix_versions": [
-        "12.3.0"
-      ]
-    },
-    {
-      "package": "pillow",
-      "id": "PYSEC-2026-3494",
-      "fix_versions": [
-        "12.3.0"
-      ]
-    },
-    {
-      "package": "pillow",
-      "id": "PYSEC-2026-3495",
-      "fix_versions": [
-        "12.3.0"
-      ]
-    },
-    {
-      "package": "pillow",
-      "id": "PYSEC-2026-3496",
-      "fix_versions": [
-        "12.3.0"
-      ]
-    },
-    {
-      "package": "python-dotenv",
-      "id": "PYSEC-2026-2270",
-      "fix_versions": [
-        "1.2.2"
-      ]
-    },
-    {
-      "package": "ragas",
-      "id": "PYSEC-2026-3046",
-      "fix_versions": []
-    },
-    {
-      "package": "ragas",
-      "id": "PYSEC-2026-3047",
-      "fix_versions": [
-        "0.3.0rc1"
-      ]
-    },
-    {
-      "package": "setuptools",
-      "id": "PYSEC-2026-3447",
-      "fix_versions": [
-        "83.0.0"
-      ]
-    },
-    {
-      "package": "setuptools",
-      "id": "PYSEC-2026-3447",
-      "fix_versions": [
-        "83.0.0"
-      ]
-    },
-    {
-      "package": "starlette",
-      "id": "PYSEC-2026-161",
-      "fix_versions": [
-        "1.0.1"
-      ]
-    },
-    {
-      "package": "starlette",
-      "id": "PYSEC-2026-161",
-      "fix_versions": [
-        "1.0.1"
-      ]
-    },
-    {
-      "package": "starlette",
-      "id": "PYSEC-2026-1941",
-      "fix_versions": [
-        "0.47.2"
-      ]
-    },
-    {
-      "package": "starlette",
-      "id": "PYSEC-2026-1942",
-      "fix_versions": [
-        "0.49.1"
-      ]
-    },
-    {
-      "package": "starlette",
-      "id": "PYSEC-2026-2280",
-      "fix_versions": [
-        "1.1.0"
-      ]
-    },
-    {
-      "package": "starlette",
-      "id": "PYSEC-2026-2281",
-      "fix_versions": [
-        "1.1.0"
-      ]
-    },
-    {
-      "package": "starlette",
-      "id": "PYSEC-2026-248",
-      "fix_versions": [
-        "1.3.0"
-      ]
-    },
-    {
-      "package": "starlette",
-      "id": "PYSEC-2026-248",
-      "fix_versions": [
-        "1.3.0"
-      ]
-    },
-    {
-      "package": "starlette",
-      "id": "PYSEC-2026-249",
-      "fix_versions": [
-        "1.3.1"
-      ]
-    },
-    {
-      "package": "streamlit",
-      "id": "PYSEC-2026-212",
-      "fix_versions": [
-        "1.53.1"
-      ]
-    },
-    {
-      "package": "streamlit",
-      "id": "PYSEC-2026-2285",
-      "fix_versions": [
-        "1.54.0"
+        "0.7.31"
       ]
     }
   ]
