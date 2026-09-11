@@ -65,7 +65,26 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/master' && github.event_name == 'push'
 
+    # SSH on the shared host's security group is locked to a single home
+    # IP, so the runner (a different IP every run) can't reach port 22 by
+    # default. Open it just for this runner's own IP for the life of the
+    # job, then close it again even if the deploy fails. Same pattern as
+    # evalforge and incident-memory-ai, which share this security group.
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.DEPLOY_AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.DEPLOY_AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: us-east-1
+      SG_ID: sg-0c7f5612c7d11e8f4
+
     steps:
+      - name: Allow this runner's IP through SSH
+        run: |
+          RUNNER_IP="$(curl -s https://checkip.amazonaws.com)/32"
+          echo "RUNNER_CIDR=$RUNNER_IP" >> "$GITHUB_ENV"
+          aws ec2 authorize-security-group-ingress \
+            --group-id "$SG_ID" \
+            --ip-permissions "IpProtocol=tcp,FromPort=22,ToPort=22,IpRanges=[{CidrIp=$RUNNER_IP,Description='CI runner ${{ github.run_id }}'}]"
+
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -131,3 +150,10 @@ jobs:
               echo "Rolled back to $OLD_IMAGE"
             fi
             exit 1
+
+      - name: Revoke this runner's IP from SSH
+        if: always()
+        run: |
+          aws ec2 revoke-security-group-ingress \
+            --group-id "$SG_ID" \
+            --protocol tcp --port 22 --cidr "$RUNNER_CIDR" || true
