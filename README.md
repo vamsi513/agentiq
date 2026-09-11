@@ -391,9 +391,9 @@ Request rate (~3 req/s peak), agent turns by route, per-node latency, a 93.9% re
 
 ### Testing
 
-- 116 tests, all passing, all offline — no test depends on a real paid API call. Run: `pytest tests/ -v`
-- `tests/test_security.py` (23 tests): adversarial cases — direct injection, routing manipulation, obfuscation/padding, oversized input, malformed input — plus confirmation that legitimate queries across all three real routing categories are never falsely flagged.
-- `tests/test_failure_modes.py` (17 tests): Tavily 429/timeout/5xx/4xx/connection-failure/invalid-key, LLM timeout/error, empty retrieval, malformed API requests, and unrecognized router output — all mocked, deterministic.
+- 148 tests, all passing, all offline — no test depends on a real paid API call. Run: `pytest tests/ -v`
+- `tests/test_security.py`: adversarial cases — direct injection, routing manipulation, obfuscation/padding, oversized input, malformed input — plus confirmation that legitimate queries across all three real routing categories are never falsely flagged, and a graph-level check (`TestGraphNeverCallsLLMOnBlock`) that a BLOCKed query never reaches the LLM.
+- `tests/test_failure_modes.py`: Tavily 429/timeout/5xx/4xx/connection-failure/invalid-key, LLM timeout/error, empty retrieval, malformed API requests, and unrecognized router output — all mocked, deterministic.
 
 ### Load Testing
 
@@ -414,6 +414,24 @@ Throughput plateaus between 25 and 50 concurrent requests while latency roughly 
 **Real-provider load testing** (actual OpenAI/Tavily latency) is deliberately not automated — it costs money and can trip real rate limits. To do it safely: point `scripts/load_test.py`'s mocked calls at the real `_get_llm()`/`web_search()` functions instead, use low concurrency (2-3) and a small request count, and check your provider dashboards for cost/quota impact before scaling up.
 
 **Not claimed:** any specific production throughput ceiling, or that these numbers reflect real OpenAI/Tavily response times.
+
+### Locust Load Test
+
+A second, independent load test using [Locust](https://locust.io/) (`tests/load/locustfile.py`) drives real HTTP requests against a running instance of the FastAPI app over the network (rather than in-process), with the LLM call mocked to keep the test free and repeatable. Reproduce:
+
+```bash
+locust -f tests/load/locustfile.py --headless -u <users> -r <spawn-rate> --run-time 1m --host http://localhost:8000 --csv results/locust_u<users>
+```
+
+Real results at 10, 25, and 50 concurrent users (1-minute runs, zero request failures at every level):
+
+| Users | Requests | Req/s | p50 | p95 | p99 | Max | Failures |
+|---|---|---|---|---|---|---|---|
+| 10 | 307 | 6.9/s | 97ms | 890ms | 1600ms | 2622ms | 0 |
+| 25 | 795 | 18.0/s | 95ms | 130ms | 1500ms | 3227ms | 0 |
+| 50 | 1585 | 35.9/s | 98ms | 210ms | 1500ms | 2969ms | 0 |
+
+Full raw stats: `results/locust_u10_stats.csv`, `results/locust_u25_stats.csv`, `results/locust_u50_stats.csv`. Like the in-process load test above, this measures orchestration/application overhead with mocked upstreams, not real OpenAI/Tavily latency — the p95/p99 tail at low concurrency (890ms/1600ms at 10 users) is noisier than the aggregate throughput number suggests and isn't smoothed away here.
 
 ### OpenShift Deployment
 
@@ -470,10 +488,14 @@ Every push to `master` triggers a GitHub Actions pipeline:
 
 1. Runs the full test suite
 2. Builds the Docker image (catches broken images before they reach the server)
-3. Deploys to EC2 via SSH — pulls the exact tested commit, rebuilds, and restarts the container
-4. Runs a health check loop (`GET /health`) — if the app fails to start, the old image is automatically restored
+3. Opens SSH to the runner's own IP on the shared security group for the duration of the deploy — the host's SSH access is otherwise locked down, and the runner's IP is different on every run
+4. Deploys to EC2 via SSH — pulls the exact tested commit, rebuilds, and restarts the container
+5. Runs a health check loop (`GET /health`) — if the app fails to start, the old image is automatically restored
+6. Revokes the runner's SSH access again in a cleanup step that runs even if the deploy failed
 
-Required GitHub Secrets: `EC2_HOST`, `EC2_SSH_KEY`
+This is the same shared-host security group as EvalForge and IncidentMemoryAI — all three run separate containers on the same EC2 instance.
+
+Required GitHub Secrets: `EC2_HOST`, `EC2_SSH_KEY`, `DEPLOY_AWS_ACCESS_KEY_ID`, `DEPLOY_AWS_SECRET_ACCESS_KEY`
 
 ### Kubernetes
 
