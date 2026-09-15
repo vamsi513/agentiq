@@ -60,7 +60,7 @@ Direct route answers from the LLM's own knowledge and goes straight to the
 response — it does not pass through the Generator Node (no retrieval context
 exists to synthesise for conversational/general-knowledge queries).
 
-- **Memory:** MemorySaver checkpoints every turn → full multi-turn history per session
+- **Memory:** checkpoints every turn for full multi-turn history per session — MemorySaver (in-process) by default, or durable AsyncPostgresSaver when `CHECKPOINT_DSN` is set
 - **Observability:** LangSmith traces every graph run end-to-end (when `LANGCHAIN_API_KEY` is configured)
 
 ---
@@ -69,7 +69,8 @@ exists to synthesise for conversational/general-knowledge queries).
 
 - **Multi-step agentic reasoning** with LangGraph StateGraph — router, retriever, web search, and generator nodes wired with conditional edges
 - **FAISS retrieval** — the only backend the live agent queries, with L2-normalized embeddings for cosine similarity. `retrieval/pinecone_store.py` and `retrieval/llamaindex_loader.py` are standalone reference implementations of alternative backends — neither is wired into `agent/nodes.py`, so switching to them today would mean calling their functions directly rather than flipping a config flag
-- **In-process session memory** with LangGraph MemorySaver checkpointing across all turns in a session (process-local; not persisted across restarts)
+- **Session memory** with LangGraph checkpointing across all turns in a session — MemorySaver by default (process-local, not persisted across restarts), or `agent/memory.py`'s AsyncPostgresSaver when `CHECKPOINT_DSN` is set, so conversation state survives a process restart
+- **Optional Redis response cache** (`agent/cache.py`) — when `REDIS_URL` is set, an identical query on a fresh session (no prior conversation context to honour) is served from Redis instead of re-running the graph, with a TTL (`CACHE_TTL_SECONDS`, default 1h); unset by default, in which case every call path is a plain no-op
 - **Real-time streaming responses** via FastAPI Server-Sent Events (SSE) with token-level output
 - **LangSmith observability** — every graph run is traced end-to-end with inputs, outputs, latency, and token usage, when `LANGCHAIN_API_KEY` is configured (not required to run the app)
 - **RAGAS evaluation** — answer relevance **0.73**, faithfulness **0.69** across 50 queries spanning retrieval, direct-answer, and web search routes
@@ -179,6 +180,10 @@ AGENTIQ_API_KEY=                    # requires X-API-Key header when set
 ALLOWED_ORIGINS=                    # comma-separated CORS origins; unset allows all
 TRUSTED_PROXY_IPS=127.0.0.1         # proxies trusted to set X-Forwarded-For
 
+# Persistence (optional — unset means in-process MemorySaver / no cache)
+CHECKPOINT_DSN=                     # Postgres DSN; enables durable AsyncPostgresSaver checkpoints
+REDIS_URL=                          # enables the fresh-session response cache in agent/cache.py
+
 # Model defaults
 OPENAI_MODEL=gpt-4o-mini
 EMBEDDING_MODEL=all-MiniLM-L6-v2
@@ -207,7 +212,8 @@ agentiq/
 │   ├── graph.py                    # LangGraph StateGraph with conditional routing
 │   ├── nodes.py                    # Router, retriever, web_search, generator nodes
 │   ├── state.py                    # AgentState TypedDict
-│   └── memory.py                   # MemorySaver + thread management
+│   ├── memory.py                   # MemorySaver / AsyncPostgresSaver checkpointer + thread management
+│   └── cache.py                    # optional Redis response cache for fresh-session queries
 ├── retrieval/
 │   ├── vectorstore.py              # FAISS index: build, persist, query
 │   ├── embeddings.py               # sentence-transformers wrapper
@@ -290,7 +296,7 @@ The full RAGAS pipeline is triggered via the **RAGAS Evaluation** workflow in Gi
 Runs before routing on every turn. Scores the query with heuristics for instruction-override phrasing, routing/tool-manipulation attempts, and obfuscation signals (padding, encoded blobs). A high-confidence match short-circuits straight to a fixed refusal — no LLM call or tool invocation happens for a blocked query. See [Production Readiness](#production-readiness) below for what this does and doesn't claim.
 
 ### Router Node
-Receives the user query and uses GPT-4o-mini to decide between `retrieval`, `web_search`, or `direct`. Unknown responses default to `retrieval`.
+Receives the user query and uses GPT-4o-mini to decide between `retrieval`, `web_search`, or `direct`. Unrecognised or ambiguous output — including a non-string, an injection attempt, or a hallucinated tool name — falls back to `direct` (`agent/state.py::sanitize_route`) rather than being dispatched.
 
 ### Retriever Node
 Queries the FAISS vector index. The query is encoded with `all-MiniLM-L6-v2`, L2-normalised, and searched via cosine similarity. Pinecone and LlamaIndex modules are standalone reference implementations and are not connected to the live graph.
@@ -304,8 +310,8 @@ Receives the assembled context and full conversation history. Constructs a groun
 ### LangSmith Observability
 `configure_tracing()` is called at app startup. When `LANGCHAIN_API_KEY` is set, every graph run — including intermediate node transitions, token counts, and latencies — is streamed to LangSmith.
 
-### Memory (MemorySaver)
-Every graph run is checkpointed under the session's `thread_id`. The full state graph is restored on each invocation for multi-turn coherence.
+### Memory
+Every graph run is checkpointed under the session's `thread_id`. The full state graph is restored on each invocation for multi-turn coherence. MemorySaver (in-process) is the default; setting `CHECKPOINT_DSN` switches to `agent/memory.py`'s AsyncPostgresSaver so state survives a process restart, falling back to MemorySaver if Postgres is configured but unreachable.
 
 ---
 
@@ -353,7 +359,7 @@ This section documents what's actually implemented and tested — not aspiration
 
 - **FAISS**: reads (`query_vectorstore`) are safe under concurrency — `IndexFlatIP.search()` doesn't mutate index state. The lazy-build path (`get_vectorstore()`) previously had a real bug: an `_index_lock` was declared for exactly this purpose but never actually acquired, so two concurrent first-requests (e.g. if startup pre-warm fails) could both build and redundantly overwrite the on-disk index. Fixed with double-checked locking — the common case (index already cached) stays lock-free. Per-session upload indices (`_session_indices`) were already correctly locked (`_session_lock`) and untouched.
 - **LangGraph**: the graph runs via `ainvoke`/`astream_events`, which executes sync node functions in a thread pool — confirmed concurrent requests genuinely run in separate threads, not serialized.
-- **MemorySaver**: process-local, in-memory, keyed by `thread_id` (session ID). Concurrent requests to *different* sessions don't conflict. A double-submit within the *same* session concurrently is an unhandled edge case — not fixed, since it's a narrow UX edge case (a user double-clicking send) rather than a security or correctness issue affecting other users.
+- **Checkpointing**: keyed by `thread_id` (session ID), whether the backend is the default in-process MemorySaver or the optional AsyncPostgresSaver. Concurrent requests to *different* sessions don't conflict. A double-submit within the *same* session concurrently is an unhandled edge case — not fixed, since it's a narrow UX edge case (a user double-clicking send) rather than a security or correctness issue affecting other users.
 
 ### Rate Limiting
 
