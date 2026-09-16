@@ -16,8 +16,6 @@
 
 **[AgentIQ on Streamlit Cloud](https://agentiq-qgjmzy665qcpysoctz7app.streamlit.app)** — original UI, also supports PDF upload
 
-![AgentIQ chat UI showing a streamed, cited retrieval answer](docs/screenshot.png)
-
 ---
 
 ## Screenshots
