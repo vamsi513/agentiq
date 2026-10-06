@@ -129,6 +129,29 @@ class WebSearchResult:
         }
 
 
+def _resolve_api_key() -> str:
+    """Get the Tavily key, through the credential broker when it is enabled.
+
+    With CREDENTIAL_BROKER_ENABLED false this returns settings.tavily_api_key
+    directly, which is exactly what this module did before the broker existed.
+    With it on, the key is fetched against a short lived handle scoped to
+    web_search, so the value is never held anywhere but this call.
+    """
+    if not getattr(settings, "credential_broker_enabled", False):
+        return settings.tavily_api_key
+    from agent.credentials import SCOPE_WEB_SEARCH, CredentialError, get_broker
+
+    broker = get_broker()
+    handle = broker.issue(SCOPE_WEB_SEARCH)
+    try:
+        return broker.use(handle, SCOPE_WEB_SEARCH)
+    except CredentialError:
+        logger.exception("Credential broker could not supply the web search key")
+        return ""
+    finally:
+        broker.revoke(handle)
+
+
 def _build_client():
     """
     Lazily construct an AsyncTavilyClient, returning None if the key is missing.
@@ -147,7 +170,7 @@ def _build_client():
         return None
     try:
         from tavily import AsyncTavilyClient  # type: ignore[import]
-        return AsyncTavilyClient(api_key=settings.tavily_api_key)
+        return AsyncTavilyClient(api_key=_resolve_api_key())
     except ImportError:
         logger.error("tavily-python is not installed. Run: pip install tavily-python")
         return None

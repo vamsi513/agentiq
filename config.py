@@ -97,6 +97,13 @@ class Settings:
         self.top_k_retrieval: int = int(os.getenv("TOP_K_RETRIEVAL", "5"))
         self.max_web_results: int = int(os.getenv("MAX_WEB_RESULTS", "5"))
         self.enable_query_rewriting: bool = os.getenv("ENABLE_QUERY_REWRITING", "false").lower() == "true"
+
+        # ── Credential handling ──────────────────────────────────────────
+        # Log redaction is off by default. The query log lines do not depend
+        # on it: they never include query text at all.
+        self.redaction_enabled: bool = os.getenv("REDACTION_ENABLED", "false").lower() == "true"
+        self.credential_ttl_seconds: float = float(os.getenv("CREDENTIAL_TTL_SECONDS", "300"))
+        self.credential_broker_enabled: bool = os.getenv("CREDENTIAL_BROKER_ENABLED", "false").lower() == "true"
         # Optional API key to protect the FastAPI /chat endpoints.
         # When set, callers must include X-API-Key: <value> in the request header.
         # Leave unset (default) to allow unauthenticated access (dev/demo mode).

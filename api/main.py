@@ -234,7 +234,12 @@ async def chat(request: ChatRequest, req: Request, _: None = Depends(_require_ap
     """
     _check_rate_limit(req)
     session_id = request.session_id or str(uuid.uuid4())
-    logger.info("POST /chat | session=%s | query='%.60s'", session_id, request.query)
+    # The query is deliberately not logged. A user can paste a credential
+    # into a question, and a log line is the easiest place for it to be
+    # retained and shipped somewhere else. Length is enough for debugging.
+    logger.info(
+        "POST /chat | session=%s | query_chars=%d", session_id, len(request.query)
+    )
 
     # Only cache when the client didn't supply a session_id: a fresh session
     # has no prior conversation context, so an identical query is safe to
@@ -299,9 +304,9 @@ async def chat_stream(request: ChatRequest, req: Request, _: None = Depends(_req
     _check_rate_limit(req)
     session_id = request.session_id or str(uuid.uuid4())
     logger.info(
-        "POST /chat/stream | session=%s | query='%.60s'",
+        "POST /chat/stream | session=%s | query_chars=%d",
         session_id,
-        request.query,
+        len(request.query),
     )
 
     return StreamingResponse(
