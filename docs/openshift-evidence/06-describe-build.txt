@@ -1,0 +1,31 @@
+Name:		agentiq-3
+Namespace:	saduvamsikrishna513-dev
+Created:	3 weeks ago
+Labels:		build=agentiq
+		buildconfig=agentiq
+		openshift.io/build-config.name=agentiq
+		openshift.io/build.start-policy=Serial
+Annotations:	openshift.io/build-config.name=agentiq
+		openshift.io/build.number=3
+		openshift.io/build.pod-name=agentiq-3-build
+
+Status:		Complete
+Started:	Tue, 08 Sep 2026 15:50:33 CDT
+Duration:	7m56s
+  PullImages:	  6s
+  Build:	  3m53s
+  PushImage:	  29s
+
+Build Config:	agentiq
+Build Pod:	agentiq-3-build
+Image Digest:	sha256:7639a0a6dc5527c4b922a97a212101878b1a4b0c7f76c0e6ede67e21753afc47
+
+Strategy:	Docker
+Volumes:	<none>
+Output to:	ImageStreamTag agentiq:latest
+Binary:		provided on build
+Push Secret:	builder-dockercfg-stp8z
+
+Build trigger cause:	<unknown>
+
+Events:	<none>

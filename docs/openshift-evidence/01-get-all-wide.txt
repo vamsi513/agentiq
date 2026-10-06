@@ -1,0 +1,12 @@
+NAME                          READY   UP-TO-DATE   AVAILABLE   AGE   CONTAINERS    IMAGES                                                                                    SELECTOR
+deployment.apps/agentiq-api   0/0     0            0           26d   agentiq-api   image-registry.openshift-image-registry.svc:5000/saduvamsikrishna513-dev/agentiq:latest   app=agentiq-api
+
+NAME                        TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)                               AGE   SELECTOR
+service/agentiq-api         ClusterIP   172.30.207.220   <none>        80/TCP                                26d   app=agentiq-api
+service/modelmesh-serving   ClusterIP   None             <none>        8033/TCP,8008/TCP,8443/TCP,2112/TCP   27d   modelmesh-service=modelmesh-serving
+
+NAME                                   HOST/PORT                                                                PATH   SERVICES      PORT   TERMINATION     WILDCARD
+route.route.openshift.io/agentiq-api   agentiq-api-saduvamsikrishna513-dev.apps.rm2.thpm.p1.openshiftapps.com          agentiq-api   http   edge/Redirect   None
+
+NAME                                                  REFERENCE                TARGETS              MINPODS   MAXPODS   REPLICAS   AGE
+horizontalpodautoscaler.autoscaling/agentiq-api-hpa   Deployment/agentiq-api   cpu: <unknown>/60%   1         6         0          26d

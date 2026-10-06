@@ -1,0 +1,15 @@
+=== oc get builds ===
+NAME        TYPE     FROM             STATUS     STARTED       DURATION
+agentiq-3   Docker   Binary@77c2ccd   Complete   3 weeks ago   7m56s
+
+=== oc get bc ===
+NAME      TYPE     FROM     LATEST
+agentiq   Docker   Binary   3
+
+=== oc get is ===
+NAME      IMAGE REPOSITORY                                                                                            TAGS     UPDATED
+agentiq   default-route-openshift-image-registry.apps.rm2.thpm.p1.openshiftapps.com/saduvamsikrishna513-dev/agentiq   latest   3 weeks ago
+
+=== oc get istag ===
+NAME             IMAGE REFERENCE                                                                                                                                            UPDATED
+agentiq:latest   image-registry.openshift-image-registry.svc:5000/saduvamsikrishna513-dev/agentiq@sha256:7639a0a6dc5527c4b922a97a212101878b1a4b0c7f76c0e6ede67e21753afc47   3 weeks ago

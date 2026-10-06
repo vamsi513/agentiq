@@ -1,0 +1,18 @@
+Name:                                                  agentiq-api-hpa
+Namespace:                                             saduvamsikrishna513-dev
+Labels:                                                app=agentiq-api
+Annotations:                                           <none>
+CreationTimestamp:                                     Tue, 08 Sep 2026 15:58:40 -0500
+Reference:                                             Deployment/agentiq-api
+Metrics:                                               ( current / target )
+  resource cpu on pods  (as a percentage of request):  <unknown> / 60%
+Min replicas:                                          1
+Max replicas:                                          6
+Deployment pods:                                       0 current / 0 desired
+Conditions:
+  Type            Status  Reason             Message
+  ----            ------  ------             -------
+  AbleToScale     True    SucceededGetScale  the HPA controller was able to get the target's current scale
+  ScalingActive   False   ScalingDisabled    scaling is disabled since the replica count of the target is zero
+  ScalingLimited  True    TooFewReplicas     the desired replica count is less than the minimum replica count
+Events:           <none>
