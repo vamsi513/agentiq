@@ -71,7 +71,7 @@ exists to synthesise for conversational/general-knowledge queries).
 - **Optional Redis response cache** (`agent/cache.py`) — when `REDIS_URL` is set, an identical query on a fresh session (no prior conversation context to honour) is served from Redis instead of re-running the graph, with a TTL (`CACHE_TTL_SECONDS`, default 1h); unset by default, in which case every call path is a plain no-op
 - **Real-time streaming responses** via FastAPI Server-Sent Events (SSE) with token-level output
 - **LangSmith observability** — every graph run is traced end-to-end with inputs, outputs, latency, and token usage, when `LANGCHAIN_API_KEY` is configured (not required to run the app)
-- **RAGAS evaluation** — answer relevance **0.73**, faithfulness **0.69** across 50 queries spanning retrieval, direct-answer, and web search routes
+- **RAGAS evaluation**, answer relevance **0.6875**, faithfulness **0.6743**, across 50 queries spanning retrieval, direct-answer, and web search routes
 - **PDF upload** (Streamlit app only, not the public Next.js demo) — users can upload their own PDFs; text is extracted, chunked, and indexed into FAISS at runtime
 - **LoRA fine-tuning notebook** — `notebooks/finetune_lora.ipynb` demonstrates full PEFT/LoRA fine-tuning on a custom Q&A dataset
 - **Kubernetes / OpenShift manifests** — `k8s/` holds the vanilla-Kubernetes reference set; `k8s/openshift/` is the adapted set that has actually been deployed and verified on an OpenShift cluster (Route, SCC-compatible security context, on-cluster build, HPA). See [OpenShift deployment](#openshift-deployment)
