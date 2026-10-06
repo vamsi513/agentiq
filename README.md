@@ -12,9 +12,9 @@
 
 ## Live Demo
 
-**[AgentIQ (Next.js)](https://agentiq-platform.vercel.app)** — streaming chat UI; the browser never talks to the FastAPI backend directly, it calls Next.js server-side API routes (`frontend/app/api/chat/`) which proxy to it
+**[AgentIQ (Next.js)](https://agentiq-platform.vercel.app)**, streaming chat UI. The browser never talks to the FastAPI backend directly, it calls Next.js server-side API routes (`frontend/app/api/chat/`) which proxy to it.
 
-**[AgentIQ on Streamlit Cloud](https://agentiq-qgjmzy665qcpysoctz7app.streamlit.app)** — original UI, also supports PDF upload
+The original Streamlit UI is still in the repo as `app.py` and still supports PDF upload. It runs locally, see [Run the Streamlit app (legacy)](#6-run-the-streamlit-app-legacy). It is no longer deployed publicly.
 
 ---
 
@@ -530,4 +530,4 @@ MIT License — see [LICENSE](LICENSE) for details.
 
 Built by [Vamsi Krishna Sadu](https://github.com/vamsi513)
 
-*[Live Demo](https://agentiq-qgjmzy665qcpysoctz7app.streamlit.app) · [GitHub](https://github.com/vamsi513/agentiq)*
+*[Live Demo](https://agentiq-platform.vercel.app) · [GitHub](https://github.com/vamsi513/agentiq)*
