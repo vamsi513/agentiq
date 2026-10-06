@@ -448,7 +448,7 @@ The `k8s/openshift/` manifests were deployed to a live OpenShift 4.21 cluster (R
 
 **HPA autoscaling under load.** A distributed load-test `Job` (`k8s/openshift/loadtest-job.yaml`) ran parallel pods, each with its own source IP and rate-limit budget, hitting the in-cluster Service, which drove genuine CPU load. Watched live via `oc get hpa -w` and `SuccessfulRescale` events, the deployment scaled up to 4 replicas as CPU crossed the 60% target, held there, then scaled back down after load stopped, respecting the 5-minute scale-down window. About 1,371 requests, zero pod restarts, zero 5xx. **This was observed live and is not reproducible from anything in this repo.** OpenShift expires events after roughly an hour and the sandbox namespace has since been deleted, so the scale events are gone. [`docs/openshift-evidence/`](docs/openshift-evidence/) is the surviving snapshot and its README states exactly what it does and does not show. A single client cannot move the HPA, `/chat` is I/O-bound and one IP is rate-limited to 30/min, which is why the load generator has to be distributed. Sustained load hits the OpenAI account's per-minute token limit (200K TPM) before any cluster limit. The app absorbed those 429s via its bounded retry and returned clean errors to a small fraction of requests.
 
-**Caveat:** the Developer Sandbox namespace is time-limited (~30 days, renewable) and idles workloads after inactivity, so there is no permanent public URL from this deployment — the two links under [Live Demo](#live-demo) are the always-on demos. This section documents that the manifests genuinely work on OpenShift and that the HPA genuinely autoscales, both reproducible from `k8s/openshift/README.md`.
+**Caveat:** the Developer Sandbox namespace is time-limited (~30 days, renewable) and idles workloads after inactivity, so there is no permanent public URL from this deployment — the demo linked under [Live Demo](#live-demo) is the always-on one. This section documents that the manifests genuinely work on OpenShift and that the HPA genuinely autoscales, both reproducible from `k8s/openshift/README.md`.
 
 ---
 
@@ -479,12 +479,6 @@ npm run dev          # local dev at http://localhost:3000
 ```
 
 Set `AGENTIQ_API_URL` (defaults to the live EC2 backend if unset) in Vercel's project settings, or in `frontend/.env.local` for local dev. Deploy with `vercel --prod` from inside `frontend/`.
-
-### Streamlit Cloud
-
-1. Push repository to GitHub
-2. Go to [share.streamlit.io](https://share.streamlit.io), connect the repo, set main file to `app.py`
-3. Under **Advanced settings → Secrets**, add `OPENAI_API_KEY` and `TAVILY_API_KEY`
 
 ### AWS EC2 (via GitHub Actions CI/CD)
 
