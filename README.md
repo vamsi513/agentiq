@@ -5,7 +5,7 @@
 ![Python](https://img.shields.io/badge/Python-3.11-blue?logo=python&logoColor=white)
 ![LangGraph](https://img.shields.io/badge/LangGraph-0.2.28-purple?logo=chainlink&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green)
-![Streamlit](https://img.shields.io/badge/Streamlit-1.40.0-red?logo=streamlit&logoColor=white)
+![Next.js](https://img.shields.io/badge/Next.js-16.3.3-black?logo=nextdotjs&logoColor=white)
 [![CI](https://github.com/vamsi513/agentiq/actions/workflows/ci.yml/badge.svg)](https://github.com/vamsi513/agentiq/actions/workflows/ci.yml)
 
 ---
