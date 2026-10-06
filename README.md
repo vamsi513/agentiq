@@ -93,7 +93,7 @@ exists to synthesise for conversational/general-knowledge queries).
 | Backend API | FastAPI 0.115.4 + uvicorn |
 | Streaming | Server-Sent Events (SSE) |
 | Data Validation | Pydantic v2 |
-| Frontend | Streamlit 1.40.0 |
+| Frontend | Next.js 16.3.3 + React 19 (`frontend/`); legacy Streamlit 1.40.0 app in `app.py` |
 | Evaluation | RAGAS |
 | Fine-tuning | PEFT / LoRA (Hugging Face) |
 | Container Orchestration | Kubernetes reference manifests; deployed and verified on OpenShift (Deployment + HPA + Route) |
