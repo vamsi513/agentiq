@@ -132,21 +132,21 @@ cp .env.example .env
 # Edit .env and add your API keys
 ```
 
-### 5. Run the Streamlit app
-
-```bash
-streamlit run app.py
-```
-
-The app opens at `http://localhost:8501`. The FAISS index is built automatically on first run (~30 seconds).
-
-### 6. (Optional) Run the FastAPI backend separately
+### 5. Run the FastAPI backend
 
 ```bash
 uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-API docs at `http://localhost:8000/docs`.
+API docs at `http://localhost:8000/docs`. The FAISS index is built automatically on first run (about 30 seconds). This is the entry point the Docker image and the Kubernetes manifests run.
+
+### 6. Run the Streamlit app (legacy)
+
+```bash
+streamlit run app.py
+```
+
+The app opens at `http://localhost:8501`. This is the original UI. It still works and it is the only path with PDF upload, but it is not what the deployed demo serves.
 
 ### 7. Run tests
 
@@ -198,7 +198,7 @@ LOG_LEVEL=INFO
 
 ```
 agentiq/
-├── app.py                          # Streamlit frontend entry point
+├── app.py                          # Streamlit frontend entry point (legacy, local only)
 ├── frontend/                       # Next.js chat UI (proxies to the FastAPI backend via server-side API routes)
 │   ├── app/page.tsx                # Chat interface — streaming, route badges, sources
 │   ├── app/pipeline/page.tsx       # Architecture explainer page
