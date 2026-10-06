@@ -42,6 +42,7 @@ from tavily.errors import BadRequestError, InvalidAPIKeyError, UsageLimitExceede
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential_jitter
 
 from config import settings
+from observability.audit import audited
 
 logger = logging.getLogger(__name__)
 
@@ -196,6 +197,7 @@ def _get_client():
     return _client
 
 
+@audited("web_search")
 async def web_search(
     query: str,
     max_results: int | None = None,
