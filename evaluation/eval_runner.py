@@ -25,6 +25,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+# Imported for its side effects: loading .env and installing the log redaction
+# filter. The agent modules below are imported lazily inside functions, so
+# without this the first log lines of a run would be emitted unfiltered.
+import config  # noqa: F401
+
 logger = logging.getLogger(__name__)
 
 # ── Paths ─────────────────────────────────────────────────────────────────────

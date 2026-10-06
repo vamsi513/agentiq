@@ -168,8 +168,14 @@ class TestWebSearchIntegration:
 
 
 class TestFlagDefaults:
-    def test_broker_and_redaction_are_both_off_by_default(self):
+    def test_broker_is_off_by_default(self):
         from config import settings
 
         assert settings.credential_broker_enabled is False
-        assert settings.redaction_enabled is False
+
+    def test_redaction_is_on_by_default(self):
+        """Redaction is the one feature here that defaults to on, because node
+        and tool logs retain query text and a user can paste a key into one."""
+        from config import settings
+
+        assert settings.redaction_enabled is True

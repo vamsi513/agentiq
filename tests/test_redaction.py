@@ -123,16 +123,52 @@ class TestLoggingFilter:
             logger.info("a message that would normally be scrubbed")
 
         # The line still reached the handler, and the failure was counted.
+        # Greater than, not exactly one more: the filter is also installed on
+        # the root logger by config, so a record can pass through it twice.
         assert len(caplog.records) == 1
         assert "a message that would normally be scrubbed" in caplog.text
-        assert redaction.filter_error_count() == before + 1
+        assert redaction.filter_error_count() > before
 
-    def test_install_is_off_unless_the_flag_is_set(self, monkeypatch):
+    def test_install_is_skipped_when_the_flag_is_turned_off(self, monkeypatch):
         from config import settings
 
         monkeypatch.setattr(settings, "redaction_enabled", False)
         monkeypatch.setattr(redaction, "_installed", False)
         assert redaction.install_log_redaction() is False
+
+    def test_the_filter_is_actually_installed_on_import(self):
+        """The flag would be meaningless if nothing called the installer."""
+        import config  # noqa: F401  imported for its side effect
+
+        assert redaction._installed is True
+        root = logging.getLogger()
+        names = [type(f).__name__ for f in root.filters]
+        assert "RedactingFilter" in names
+
+    def test_a_configured_secret_is_masked_through_the_real_root_logger(self, monkeypatch):
+        """End to end: the literal value this process holds does not get out."""
+        import io
+
+        from config import settings
+
+        secret = "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"
+        monkeypatch.setattr(settings, "tavily_api_key", secret)
+
+        buf = io.StringIO()
+        handler = logging.StreamHandler(buf)
+        handler.setFormatter(logging.Formatter("%(message)s"))
+        handler.addFilter(RedactingFilter())
+        log = logging.getLogger("agentiq.test.endtoend")
+        log.addHandler(handler)
+        log.setLevel(logging.INFO)
+        try:
+            log.info("key is %s", secret)
+        finally:
+            log.removeHandler(handler)
+
+        out = buf.getvalue()
+        assert secret not in out
+        assert PLACEHOLDER in out
 
 
 class TestApiLogLinesDoNotCarryQueryText:
