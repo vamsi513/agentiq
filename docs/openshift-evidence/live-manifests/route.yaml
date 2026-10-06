@@ -1,0 +1,19 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  labels:
+    app: agentiq-api
+  name: agentiq-api
+  namespace: saduvamsikrishna513-dev
+spec:
+  host: agentiq-api-saduvamsikrishna513-dev.apps.rm2.thpm.p1.openshiftapps.com
+  port:
+    targetPort: http
+  tls:
+    insecureEdgeTerminationPolicy: Redirect
+    termination: edge
+  to:
+    kind: Service
+    name: agentiq-api
+    weight: 100
+  wildcardPolicy: None

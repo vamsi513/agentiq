@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: agentiq-api
+  name: agentiq-api
+  namespace: saduvamsikrishna513-dev
+spec:
+  clusterIP: 172.30.207.220
+  clusterIPs:
+  - 172.30.207.220
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 8000
+  selector:
+    app: agentiq-api
+  sessionAffinity: None
+  type: ClusterIP

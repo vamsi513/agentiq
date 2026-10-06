@@ -1,0 +1,20 @@
+Route hostname:
+  agentiq-api-saduvamsikrishna513-dev.apps.rm2.thpm.p1.openshiftapps.com
+
+Captured: 2026-10-05 20:49:45 UTC
+
+Command: curl -s -S -i https://$HOST/health
+
+Response status line and headers:
+HTTP/1.0 503 Service Unavailable
+pragma: no-cache
+cache-control: private, max-age=0, no-cache, no-store
+content-type: text/html
+
+
+Body: the standard OpenShift router error page ("Application is not available").
+Full HTML body omitted; it contains no application output.
+
+Reason: the Deployment is scaled to 0 replicas (the Developer Sandbox idles
+inactive workloads), so the Route resolves and the cluster router answers,
+but there is no pod behind the Service to serve /health.

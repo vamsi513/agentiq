@@ -1,0 +1,46 @@
+Name:                   agentiq-api
+Namespace:              saduvamsikrishna513-dev
+CreationTimestamp:      Tue, 08 Sep 2026 15:58:40 -0500
+Labels:                 app=agentiq-api
+                        version=1.0
+Annotations:            deployment.kubernetes.io/revision: 2
+Selector:               app=agentiq-api
+Replicas:               0 desired | 0 updated | 0 total | 0 available | 0 unavailable
+StrategyType:           RollingUpdate
+MinReadySeconds:        0
+RollingUpdateStrategy:  25% max unavailable, 25% max surge
+Pod Template:
+  Labels:       app=agentiq-api
+  Annotations:  kubectl.kubernetes.io/restartedAt: 2026-09-08T16:03:48-05:00
+  Containers:
+   agentiq-api:
+    Image:      image-registry.openshift-image-registry.svc:5000/saduvamsikrishna513-dev/agentiq:latest
+    Port:       8000/TCP (http)
+    Host Port:  0/TCP (http)
+    Limits:
+      cpu:     800m
+      memory:  1536Mi
+    Requests:
+      cpu:      250m
+      memory:   512Mi
+    Liveness:   http-get http://:8000/health delay=60s timeout=1s period=20s #success=1 #failure=3
+    Readiness:  http-get http://:8000/health delay=0s timeout=1s period=10s #success=1 #failure=3
+    Startup:    http-get http://:8000/health delay=0s timeout=1s period=5s #success=1 #failure=30
+    Environment Variables from:
+      agentiq-secrets  Secret  Optional: false
+    Environment:
+      LOG_LEVEL:             INFO
+      ALLOWED_ORIGINS:       *
+      LANGCHAIN_TRACING_V2:  false
+    Mounts:                  <none>
+  Volumes:                   <none>
+  Node-Selectors:            <none>
+  Tolerations:               <none>
+Conditions:
+  Type           Status  Reason
+  ----           ------  ------
+  Progressing    True    NewReplicaSetAvailable
+  Available      True    MinimumReplicasAvailable
+OldReplicaSets:  agentiq-api-9c754c978 (0/0 replicas created)
+NewReplicaSet:   agentiq-api-5564f57fb6 (0/0 replicas created)
+Events:          <none>
