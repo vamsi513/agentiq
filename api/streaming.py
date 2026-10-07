@@ -200,6 +200,7 @@ async def run_agent_sync(
     """
     import time as _time
 
+    from agent.budgets import BudgetExceeded, reset_tracker, start_run
     from agent.cache import get_cached, set_cached
     from agent.graph import get_graph
 
@@ -223,6 +224,9 @@ async def run_agent_sync(
     graph = get_graph()
     config = get_thread_config(session_id)
     initial_state = _build_initial_state(query, session_id)
+
+    # No-op unless BUDGETS_ENABLED is true.
+    tracker, budget_token = start_run()
 
     try:
         # ainvoke is the async-safe version of invoke — never blocks event loop
@@ -249,6 +253,33 @@ async def run_agent_sync(
         _record(response["route_decision"], cached=False)
         return response
 
+    except BudgetExceeded as exc:
+        # A run that hits its budget is a known outcome, not a failure. Report
+        # it with a named status instead of letting it surface as a 500.
+        logger.warning(
+            "run stopped by budget session=%s reason=%s", session_id, exc.reason
+        )
+        _record("budget_exceeded", cached=False)
+        return {
+            "answer": (
+                "This run stopped because it reached its configured budget "
+                f"({exc.reason}). Try a narrower question."
+            ),
+            "sources": [],
+            "context": "",
+            "route_decision": "budget_exceeded",
+            "session_id": session_id,
+            "turn_count": 0,
+            "retrieval_score": 0.0,
+            "cached": False,
+            "status": exc.reason,
+            "budget": tracker.status() if tracker is not None else None,
+        }
+
     except Exception:
         logger.exception("Agent sync run failed")
         raise
+
+    finally:
+        if budget_token is not None:
+            reset_tracker(budget_token)
