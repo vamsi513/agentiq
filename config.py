@@ -106,7 +106,6 @@ class Settings:
         self.budget_max_steps: int = int(os.getenv("BUDGET_MAX_STEPS", "12"))
         self.budget_max_tokens: int = int(os.getenv("BUDGET_MAX_TOKENS", "8000"))
         self.budget_max_wall_seconds: float = float(os.getenv("BUDGET_MAX_WALL_SECONDS", "60"))
-
         # ── Credential handling ──────────────────────────────────────────
         # Log redaction is on by default. Node and tool level logs include
         # the query at INFO, and a user can paste a credential into a
@@ -116,6 +115,10 @@ class Settings:
         self.redaction_enabled: bool = os.getenv("REDACTION_ENABLED", "true").lower() == "true"
         self.credential_ttl_seconds: float = float(os.getenv("CREDENTIAL_TTL_SECONDS", "300"))
         self.credential_broker_enabled: bool = os.getenv("CREDENTIAL_BROKER_ENABLED", "false").lower() == "true"
+        # ── Tool audit log ───────────────────────────────────────────────
+        # Off by default. One JSON line per tool call: tool, redacted argument
+        # summary, duration and outcome.
+        self.audit_log_enabled: bool = os.getenv("AUDIT_LOG_ENABLED", "false").lower() == "true"
         # Optional API key to protect the FastAPI /chat endpoints.
         # When set, callers must include X-API-Key: <value> in the request header.
         # Leave unset (default) to allow unauthenticated access (dev/demo mode).
