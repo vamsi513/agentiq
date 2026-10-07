@@ -97,6 +97,15 @@ class Settings:
         self.top_k_retrieval: int = int(os.getenv("TOP_K_RETRIEVAL", "5"))
         self.max_web_results: int = int(os.getenv("MAX_WEB_RESULTS", "5"))
         self.enable_query_rewriting: bool = os.getenv("ENABLE_QUERY_REWRITING", "false").lower() == "true"
+
+        # ── Per-run budgets ──────────────────────────────────────────────
+        # Off by default. With BUDGETS_ENABLED false nothing is enforced and
+        # the limits below are inert. A limit of 0 means that limit is off
+        # even when enforcement is on.
+        self.budgets_enabled: bool = os.getenv("BUDGETS_ENABLED", "false").lower() == "true"
+        self.budget_max_steps: int = int(os.getenv("BUDGET_MAX_STEPS", "12"))
+        self.budget_max_tokens: int = int(os.getenv("BUDGET_MAX_TOKENS", "8000"))
+        self.budget_max_wall_seconds: float = float(os.getenv("BUDGET_MAX_WALL_SECONDS", "60"))
         # Optional API key to protect the FastAPI /chat endpoints.
         # When set, callers must include X-API-Key: <value> in the request header.
         # Leave unset (default) to allow unauthenticated access (dev/demo mode).
