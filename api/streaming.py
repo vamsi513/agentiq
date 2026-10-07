@@ -115,7 +115,8 @@ async def stream_agent_response(
     config = get_thread_config(session_id)
     initial_state = _build_initial_state(query, session_id)
 
-    logger.info("Streaming response: session=%s query='%.60s'", session_id, query)
+    # Query text is not logged, see api/main.py for why.
+    logger.info("Streaming response: session=%s query_chars=%d", session_id, len(query))
 
     try:
         captured_sources: list = []
@@ -215,10 +216,10 @@ async def run_agent_sync(
     if allow_cache:
         cached = get_cached(query)
         if cached is not None:
-            logger.info("cache_hit session=%s query='%.60s'", session_id, query)
+            logger.info("cache_hit session=%s query_chars=%d", session_id, len(query))
             _record(cached.get("route_decision", "direct"), cached=True)
             return {**cached, "session_id": session_id, "cached": True}
-        logger.info("cache_miss session=%s query='%.60s'", session_id, query)
+        logger.info("cache_miss session=%s query_chars=%d", session_id, len(query))
 
     graph = get_graph()
     config = get_thread_config(session_id)

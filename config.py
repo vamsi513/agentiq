@@ -106,6 +106,16 @@ class Settings:
         self.budget_max_steps: int = int(os.getenv("BUDGET_MAX_STEPS", "12"))
         self.budget_max_tokens: int = int(os.getenv("BUDGET_MAX_TOKENS", "8000"))
         self.budget_max_wall_seconds: float = float(os.getenv("BUDGET_MAX_WALL_SECONDS", "60"))
+
+        # ── Credential handling ──────────────────────────────────────────
+        # Log redaction is on by default. Node and tool level logs include
+        # the query at INFO, and a user can paste a credential into a
+        # question, so the filter is installed unless explicitly disabled.
+        # The API layer's query log lines do not depend on it: they never
+        # include query text at all.
+        self.redaction_enabled: bool = os.getenv("REDACTION_ENABLED", "true").lower() == "true"
+        self.credential_ttl_seconds: float = float(os.getenv("CREDENTIAL_TTL_SECONDS", "300"))
+        self.credential_broker_enabled: bool = os.getenv("CREDENTIAL_BROKER_ENABLED", "false").lower() == "true"
         # Optional API key to protect the FastAPI /chat endpoints.
         # When set, callers must include X-API-Key: <value> in the request header.
         # Leave unset (default) to allow unauthenticated access (dev/demo mode).
@@ -167,3 +177,15 @@ class Settings:
 # ── Singleton ─────────────────────────────────────────────────────────────────
 settings = Settings()
 logger.debug("Configuration loaded: model=%s", settings.openai_model)
+
+# Install the log redaction filter once, here rather than in an entry point, so
+# every process that imports config gets it: the API, the Streamlit app and the
+# evaluation runner alike. Imported lazily because agent.redaction reads
+# `settings` from this module.
+try:
+    from agent.redaction import install_log_redaction
+
+    if install_log_redaction():
+        logger.debug("Log redaction filter installed.")
+except Exception:  # pragma: no cover - redaction must never block startup
+    logger.warning("Could not install the log redaction filter.", exc_info=True)
