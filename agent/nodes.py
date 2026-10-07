@@ -37,6 +37,36 @@ _BLOCKED_RESPONSE = (
 )
 
 
+def _charge_response_tokens(response: Any) -> None:
+    """Record token usage reported by a model response against the budget.
+
+    Reads usage_metadata, which langchain-core populates when the provider
+    returns it. Missing or malformed usage is treated as zero rather than
+    guessed at, so the token budget only ever counts numbers the provider
+    actually reported.
+    """
+    from agent.budgets import charge_tokens
+
+    usage = getattr(response, "usage_metadata", None)
+    if not isinstance(usage, dict):
+        return
+    total = usage.get("total_tokens")
+    if isinstance(total, int):
+        charge_tokens(total)
+
+
+def _charge_step(stage: str) -> None:
+    """Consume one budget step for this node entry.
+
+    No-op when the run has no budget, which is the default. BudgetExceeded is
+    allowed to propagate: it is how a run stops when it is out of budget, and
+    api/streaming.py turns it into a clear status.
+    """
+    from agent.budgets import charge_step
+
+    charge_step(stage)
+
+
 def _timed(stage: str):
     """Log wall-clock duration for a pipeline stage, independent of which
     return path the wrapped node takes (including its own caught-exception
@@ -64,6 +94,7 @@ def _timed(stage: str):
             @functools.wraps(fn)
             async def async_wrapper(*args, **kwargs):
                 start = time.perf_counter()
+                _charge_step(stage)
                 try:
                     return await fn(*args, **kwargs)
                 finally:
@@ -74,6 +105,7 @@ def _timed(stage: str):
         @functools.wraps(fn)
         def wrapper(*args, **kwargs):
             start = time.perf_counter()
+            _charge_step(stage)
             try:
                 return fn(*args, **kwargs)
             finally:
@@ -518,6 +550,7 @@ def generator_node(state: AgentState) -> dict[str, Any]:
         llm = _get_llm()
         response = llm.invoke(history)
         answer = response.content
+        _charge_response_tokens(response)
 
         current_turn = state.get("turn_count", 0)
         logger.info("Generator produced answer (%d chars).", len(answer))
