@@ -15,6 +15,19 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    # Pinned MongoDB for the audit log integration test. Every other test runs
+    # without it; the integration test skips when AUDIT_MONGO_TEST_URI is unset.
+    services:
+      mongo:
+        image: mongo:7.0.14
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.runCommand({ping:1}).ok'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
     steps:
       - uses: actions/checkout@v4.2.2
 
@@ -30,7 +43,7 @@ jobs:
           restore-keys: hf-${{ runner.os }}-
 
       - name: Install dependencies
-        run: pip install -r requirements.txt pytest pytest-asyncio "ruff==0.9.10"
+        run: pip install -r requirements.txt pytest pytest-asyncio "ruff==0.9.10" "mongomock==4.3.0"
 
       - name: Pre-download embedding model
         run: python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
@@ -51,6 +64,8 @@ jobs:
         run: docker build -t agentiq-api:${{ github.sha }} .
 
       - name: Run tests
+        env:
+          AUDIT_MONGO_TEST_URI: mongodb://localhost:27017
         run: pytest tests/ -v --tb=short --junitxml=test-results.xml
 
       - name: Upload test results
