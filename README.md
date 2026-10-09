@@ -458,7 +458,7 @@ Request rate (~3 req/s peak), agent turns by route, per-node latency, a 93.9% re
 
 ### Testing
 
-- 288 tests, all passing, and none depends on a real paid API call. Run: `pytest tests/ -v`. One further test covers the MongoDB audit backend against a real server and is skipped unless `AUDIT_MONGO_TEST_URI` is set, which makes 289 when a MongoDB is available.
+- 291 tests, all passing, and none depends on a real paid API call. Run: `pytest tests/ -v`. One further test covers the MongoDB audit backend against a real server and is skipped unless `AUDIT_MONGO_TEST_URI` is set, which makes 292 when a MongoDB is available.
 - `tests/test_security.py`: adversarial cases — direct injection, routing manipulation, obfuscation/padding, oversized input, malformed input — plus confirmation that legitimate queries across all three real routing categories are never falsely flagged, and a graph-level check (`TestGraphNeverCallsLLMOnBlock`) that a BLOCKed query never reaches the LLM.
 - `tests/test_failure_modes.py`: Tavily 429/timeout/5xx/4xx/connection-failure/invalid-key, LLM timeout/error, empty retrieval, malformed API requests, and unrecognized router output — all mocked, deterministic.
 

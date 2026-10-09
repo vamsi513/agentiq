@@ -135,6 +135,17 @@ async def lifespan(app: FastAPI):
 
     yield  # Application runs here
 
+    # Best effort flush of any audit records still queued. Bounded by
+    # AUDIT_SHUTDOWN_FLUSH_SECONDS so a slow or dead backend cannot hold up
+    # shutdown, and wrapped because losing audit records must never turn a
+    # clean shutdown into a failure.
+    try:
+        from observability.audit import reset_sink
+
+        reset_sink(timeout=settings.audit_shutdown_flush_seconds)
+    except Exception as exc:  # pragma: no cover - shutdown is best effort
+        logger.warning("Audit sink shutdown flush skipped: %s", exc)
+
     from agent.memory import close_checkpointer
     await close_checkpointer()
     logger.info("AgentIQ API shutting down.")

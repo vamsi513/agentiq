@@ -104,14 +104,18 @@ def get_sink():
     return _sink
 
 
-def reset_sink() -> None:
-    """Drop the cached sink. Used by tests and when configuration changes."""
+def reset_sink(timeout: float = 0.5) -> None:
+    """Flush and drop the cached sink.
+
+    Called at shutdown so queued records get one bounded chance to land, and
+    by tests between configurations.
+    """
     global _sink
     with _sink_lock:
         current, _sink = _sink, None
     if current is not None:
         try:
-            current.close(timeout=0.5)
+            current.close(timeout=timeout)
         except Exception:  # pragma: no cover - close is best effort
             pass
 

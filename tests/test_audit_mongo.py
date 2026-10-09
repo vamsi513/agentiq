@@ -268,6 +268,51 @@ class TestUnreachableDatabaseDoesNotBreakARequest:
             monkeypatch.setattr(audit, "_sink", None)
 
 
+class TestShutdownFlush:
+    def test_close_drains_queued_records(self):
+        """Records queued at shutdown get one bounded chance to land."""
+        s = MongoSink(
+            uri="mongodb://localhost:27017",
+            database="agentiq_audit_shutdown",
+            client=mongomock.MongoClient(),
+            drain_interval=60,  # worker idle, so the queue holds the records
+        )
+        for i in range(3):
+            s.write(record(run_id=f"s{i}"))
+        collection = s._get_collection()
+        s.close(timeout=2.0)
+        assert collection.count_documents({}) == 3
+
+    def test_close_is_bounded_when_the_backend_hangs(self):
+        """A hanging backend must not hold up shutdown indefinitely."""
+        import time as _t
+
+        class Slow:
+            def __getitem__(self, _):
+                return self
+
+            def insert_many(self, *a, **k):
+                _t.sleep(5)
+
+            def create_index(self, *a, **k):
+                return None
+
+            def close(self):
+                return None
+
+        s = MongoSink(uri="mongodb://x", database="d", client=Slow(), drain_interval=60)
+        s.write(record())
+        started = _t.monotonic()
+        s.close(timeout=0.5)
+        # close() waits on the flush and the worker join, each bounded by the
+        # timeout, so it returns in a small multiple of it rather than 5s.
+        assert _t.monotonic() - started < 4.0
+
+    def test_reset_sink_accepts_a_timeout(self):
+        audit.reset_sink(timeout=0.1)
+        assert audit._sink is None
+
+
 class TestRedactionReachesTheStoredDocument:
     def test_a_planted_secret_never_reaches_mongo(self, sink, monkeypatch):
         """The decorator builds the record, so redaction must already be applied."""

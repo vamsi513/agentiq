@@ -197,6 +197,9 @@ class MongoSink:
                 self._uri,
                 serverSelectionTimeoutMS=self._connect_timeout_ms,
                 connectTimeoutMS=self._connect_timeout_ms,
+                # Without this a socket that stops responding mid-operation
+                # blocks the worker indefinitely.
+                socketTimeoutMS=self._connect_timeout_ms,
             )
         collection = self._client[self._database][self._collection_name]
         if not self._indexes_ready:
@@ -233,7 +236,7 @@ class MongoSink:
         self._drain_once(block=False)
 
     def _drain_once(self, block: bool) -> int:
-        batch: list[dict[str, Any]] = []
+        batch: list[dict[str, Any] | None] = []
         try:
             if block:
                 batch.append(self._queue.get(timeout=self._drain_interval))
@@ -243,10 +246,13 @@ class MongoSink:
             pass
         if not batch:
             return 0
-        self._insert(batch)
+        # None is the wake-up sentinel close() uses to unblock the get above.
+        records = [r for r in batch if r is not None]
+        if records:
+            self._insert(records)
         for _ in batch:
             self._queue.task_done()
-        return len(batch)
+        return len(records)
 
     def _insert(self, batch: list[dict[str, Any]]) -> None:
         """Insert a batch. Absorbs every database error."""
@@ -321,17 +327,27 @@ class MongoSink:
         return drained
 
     def close(self, timeout: float = 2.0) -> None:
-        """Best effort flush, then stop the worker and the client."""
+        """Stop the worker, giving queued records one bounded chance to land.
+
+        The final drain happens on the worker thread, not here. Doing it on the
+        caller's thread would make shutdown as slow as one hanging insert,
+        however short the timeout. The worker is a daemon, so if it is still
+        stuck in a write when the timeout expires the process can still exit.
+        """
         self._stopping.set()
         try:
-            self.flush(timeout=timeout)
-        finally:
-            self._worker.join(timeout=timeout)
-            if self._client is not None:
-                try:
-                    self._client.close()
-                except Exception:  # pragma: no cover - close is best effort
-                    pass
+            # Unblock the worker if it is waiting on an empty queue, so it
+            # reaches its final drain immediately rather than after a full
+            # drain_interval.
+            self._queue.put_nowait(None)
+        except queue.Full:  # pragma: no cover - a full queue wakes it anyway
+            pass
+        self._worker.join(timeout=timeout)
+        if self._client is not None:
+            try:
+                self._client.close()
+            except Exception:  # pragma: no cover - close is best effort
+                pass
 
     def stats(self) -> dict[str, int]:
         with self._lock:
