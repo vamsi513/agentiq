@@ -17,8 +17,8 @@ from __future__ import annotations
 
 import asyncio
 import functools
-import json
 import logging
+import threading
 import time
 from typing import Any, Callable
 
@@ -88,22 +88,38 @@ def _outcome_of(result: Any) -> str:
     return OUTCOME_OK
 
 
+_sink = None
+_sink_lock = threading.Lock()
+
+
+def get_sink():
+    """The configured sink, built once per process."""
+    global _sink
+    if _sink is None:
+        with _sink_lock:
+            if _sink is None:
+                from observability.audit_sinks import build_sink
+
+                _sink = build_sink()
+    return _sink
+
+
+def reset_sink() -> None:
+    """Drop the cached sink. Used by tests and when configuration changes."""
+    global _sink
+    with _sink_lock:
+        current, _sink = _sink, None
+    if current is not None:
+        try:
+            current.close(timeout=0.5)
+        except Exception:  # pragma: no cover - close is best effort
+            pass
+
+
 def emit(record: dict[str, Any]) -> None:
-    """Write one audit record. Never raises."""
+    """Write one audit record through the configured sink. Never raises."""
     try:
-        line = json.dumps(record, default=str, separators=(",", ":"))
-        if len(line) > _MAX_RECORD_CHARS:
-            line = json.dumps(
-                {
-                    "event": "tool_call",
-                    "tool": record.get("tool"),
-                    "outcome": record.get("outcome"),
-                    "duration_ms": record.get("duration_ms"),
-                    "truncated": True,
-                },
-                separators=(",", ":"),
-            )
-        logger.info(line)
+        get_sink().write(record)
     except Exception:  # pragma: no cover - auditing must never break a call
         logger.warning("audit record could not be written", exc_info=True)
 
@@ -112,12 +128,16 @@ def _record(tool: str, args: tuple, kwargs: dict, started: float,
             outcome: str, error: BaseException | None) -> dict[str, Any]:
     from agent.redaction import redact
 
+    from observability.audit_sinks import current_run_id, utc_now_iso
+
     record: dict[str, Any] = {
         "event": "tool_call",
         "tool": tool,
         "args": summarise_args(args, kwargs),
         "duration_ms": round((time.perf_counter() - started) * 1000, 1),
         "outcome": outcome,
+        "ts": utc_now_iso(),
+        "run_id": current_run_id(),
     }
     if error is not None:
         record["error_type"] = type(error).__name__

@@ -19,6 +19,7 @@ Custom agent instruments (recorded from the code paths that matter):
   agentiq_node_duration_seconds{node}      - per-graph-node latency
   agentiq_tool_failures_total{tool,reason} - tool fallbacks that fired
   agentiq_cache_events_total{result}       - response-cache hit / miss
+  agentiq_audit_write_failures_total{backend,reason} - audit records dropped
 """
 
 import logging
@@ -31,12 +32,13 @@ turn_duration = None
 node_duration = None
 tool_failures_total = None
 cache_events_total = None
+audit_write_failures_total = None
 
 
 def setup_metrics(app) -> None:
     """Configure OTel + Prometheus and mount /metrics on the given app."""
     global _meter, turns_total, turn_duration, node_duration
-    global tool_failures_total, cache_events_total
+    global tool_failures_total, cache_events_total, audit_write_failures_total
 
     from fastapi import Response
     from opentelemetry import metrics as otel_metrics
@@ -69,6 +71,10 @@ def setup_metrics(app) -> None:
     cache_events_total = _meter.create_counter(
         "agentiq_cache_events_total", description="Response cache hit/miss", unit="1",
     )
+    audit_write_failures_total = _meter.create_counter(
+        "agentiq_audit_write_failures_total",
+        description="Audit records dropped by the storage backend", unit="1",
+    )
 
     FastAPIInstrumentor.instrument_app(app)
 
@@ -100,3 +106,13 @@ def record_tool_failure(tool: str, reason: str) -> None:
 def record_cache_event(result: str) -> None:
     if cache_events_total is not None:
         cache_events_total.add(1, {"result": result})
+
+
+def record_audit_failure(backend: str, reason: str) -> None:
+    """Count an audit record that could not be stored.
+
+    `reason` is a bounded value: a queue state or an exception class name, never
+    a message, so it cannot carry record contents or grow unboundedly.
+    """
+    if audit_write_failures_total is not None:
+        audit_write_failures_total.add(1, {"backend": backend, "reason": reason})

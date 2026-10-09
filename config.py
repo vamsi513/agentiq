@@ -119,6 +119,26 @@ class Settings:
         # Off by default. One JSON line per tool call: tool, redacted argument
         # summary, duration and outcome.
         self.audit_log_enabled: bool = os.getenv("AUDIT_LOG_ENABLED", "false").lower() == "true"
+        # Storage backend for audit records. "log" (the default) writes one
+        # JSON line per record. "mongo" stores one document per record and
+        # needs AUDIT_MONGO_URI; without it the logging backend is used.
+        self.audit_backend: str = os.getenv("AUDIT_BACKEND", "log").strip().lower()
+        self.audit_mongo_uri: str = os.getenv("AUDIT_MONGO_URI", "")
+        self.audit_mongo_db: str = os.getenv("AUDIT_MONGO_DB", "agentiq_audit")
+        self.audit_mongo_collection: str = os.getenv("AUDIT_MONGO_COLLECTION", "tool_calls")
+        # Records are written off the request path through a bounded queue. A
+        # full queue drops rather than waits, so a slow database cannot add
+        # latency to a tool call.
+        self.audit_queue_size: int = int(os.getenv("AUDIT_QUEUE_SIZE", "1000"))
+        self.audit_queue_batch_size: int = int(os.getenv("AUDIT_QUEUE_BATCH_SIZE", "50"))
+        self.audit_drain_interval_seconds: float = float(
+            os.getenv("AUDIT_DRAIN_INTERVAL_SECONDS", "0.5")
+        )
+        self.audit_shutdown_flush_seconds: float = float(
+            os.getenv("AUDIT_SHUTDOWN_FLUSH_SECONDS", "2")
+        )
+        # TTL index on the audit collection. 0 keeps records forever.
+        self.audit_mongo_ttl_days: int = int(os.getenv("AUDIT_MONGO_TTL_DAYS", "0"))
         # Optional API key to protect the FastAPI /chat endpoints.
         # When set, callers must include X-API-Key: <value> in the request header.
         # Leave unset (default) to allow unauthenticated access (dev/demo mode).
