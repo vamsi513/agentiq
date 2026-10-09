@@ -18,6 +18,7 @@ ENV TRANSFORMERS_OFFLINE=1
 
 COPY agent ./agent
 COPY api ./api
+COPY observability ./observability
 COPY retrieval ./retrieval
 COPY tools ./tools
 COPY config.py ./
