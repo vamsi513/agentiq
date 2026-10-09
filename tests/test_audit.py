@@ -15,6 +15,21 @@ from observability.audit import audited, summarise_args
 PLANTED = "sk-audit000planted000secret000abcdefgh"
 
 
+@pytest.fixture(autouse=True)
+def logging_backend(monkeypatch):
+    """Pin the logging backend for this file.
+
+    These tests read records back out of caplog, so they describe the logging
+    sink specifically. Without this they would fail for anyone who happens to
+    have AUDIT_BACKEND=mongo set in their environment, which is a property of
+    the environment rather than of the code under test.
+    """
+    from observability import audit
+    from observability.audit_sinks import LoggingSink
+
+    monkeypatch.setattr(audit, "_sink", LoggingSink())
+
+
 @pytest.fixture
 def enabled(monkeypatch):
     from config import settings
