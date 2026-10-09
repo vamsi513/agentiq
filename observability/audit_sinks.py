@@ -171,7 +171,11 @@ class MongoSink:
         self._ttl_days = max(0, ttl_days)
         self._connect_timeout_ms = connect_timeout_ms
 
-        self._queue: queue.Queue[dict[str, Any]] = queue.Queue(maxsize=max(1, queue_size))
+        # None is a wake-up sentinel used by close(), so the queue holds
+        # records or that sentinel.
+        self._queue: queue.Queue[dict[str, Any] | None] = queue.Queue(
+            maxsize=max(1, queue_size)
+        )
         self._dropped = 0
         self._failed = 0
         self._written = 0
