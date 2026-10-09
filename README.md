@@ -98,6 +98,7 @@ exists to synthesise for conversational/general-knowledge queries).
 | Fine-tuning | PEFT / LoRA (Hugging Face) |
 | Container Orchestration | Kubernetes reference manifests; deployed and verified on OpenShift (Deployment + HPA + Route) |
 | Testing | pytest |
+| Audit log storage | JSON log lines by default; optional MongoDB via `pymongo` 4.18.3 |
 | Language | Python 3.11 |
 
 ---
@@ -351,6 +352,62 @@ This section documents what's actually implemented and tested — not aspiration
 
 **Not claimed:** "prompt-injection proof," "enterprise-grade security," or any guarantee that no adversarial input can ever get through.
 
+### Audit log storage
+
+The tool call audit log has two storage backends behind one interface in
+`observability/audit_sinks.py`. Auditing itself is off unless `AUDIT_LOG_ENABLED`
+is true, independently of which backend is selected.
+
+**Default: JSON log lines.** With `AUDIT_BACKEND` unset or `log`, each record is
+one JSON line on the `agentiq.audit` logger, which is what this has always done.
+Nothing new is required to run it and no database is involved. The logging
+backend has no read path, because log lines are not a queryable store, so its
+`query()` returns an empty list rather than raising.
+
+**Optional: MongoDB.** Set `AUDIT_BACKEND=mongo` and `AUDIT_MONGO_URI`, and each
+record becomes one document in `AUDIT_MONGO_DB` (default `agentiq_audit`),
+collection `AUDIT_MONGO_COLLECTION` (default `tool_calls`). Records carry the
+existing fields plus `ts`, a UTC ISO 8601 timestamp, and `run_id`, taken from
+the `X-Request-ID` that `api/main.py` already binds for every request and `null`
+outside a request. Reads are by run id, by `ts` range, or both, newest first
+with a limit. If `AUDIT_BACKEND=mongo` but no URI is set, the logging backend is
+used and a warning says so.
+
+**Indexes.** `run_id_idx` on `run_id` and `ts_idx` on `ts` are created on first
+use. A TTL index is optional and off by default: set `AUDIT_MONGO_TTL_DAYS` to a
+positive number to create `created_at_ttl_idx` and expire records after that
+many days. `0` keeps them forever.
+
+**Failure behaviour.** An audit write must never affect an agent request, so
+writes go through a bounded queue drained by one daemon thread. A full queue
+drops the record rather than waiting, a failing write is absorbed in the worker,
+and neither path retries forever. Both are counted on
+`agentiq_audit_write_failures_total{backend,reason}`, where `reason` is a queue
+state or an exception class name, never a message. A dead database warns once
+rather than per record, and the warning carries no record contents and no
+connection string. Queue behaviour is tunable with `AUDIT_QUEUE_SIZE`,
+`AUDIT_QUEUE_BATCH_SIZE` and `AUDIT_DRAIN_INTERVAL_SECONDS`, and shutdown makes
+one best effort flush bounded by `AUDIT_SHUTDOWN_FLUSH_SECONDS`.
+
+**Redaction.** Records are redacted when they are built, by the same
+`agent/redaction.py` filter the logs use, so a credential in a tool argument is
+masked before a record exists. The MongoDB backend redacts again in its worker
+thread before storing, because a stored document is durable and a sink is a
+public interface anything can write to. Redaction is idempotent, so the second
+pass changes nothing for records built the normal way.
+
+**No new HTTP endpoint.** There was no audit endpoint to extend, so the read
+path is a Python API on the sink rather than a new public route.
+
+Running the integration test needs a MongoDB. It is skipped without one:
+
+```bash
+docker run -d --name agentiq-audit-mongo -p 27017:27017 mongo:7.0.14
+AUDIT_MONGO_TEST_URI=mongodb://localhost:27017 pytest tests/test_audit_mongo_integration.py -v
+```
+
+CI runs it against a pinned `mongo:7.0.14` service container.
+
 ### Reliability
 
 - **Per-run budgets** (`agent/budgets.py`), `BUDGETS_ENABLED`, off by default. Caps steps, tokens and wall clock time for a single run. Steps are charged at each node entry, token usage is read from the model response's `usage_metadata` so only numbers the provider actually reported are counted, and elapsed time is checked on every node entry. A run that reaches a limit stops and returns `route_decision: budget_exceeded` with a named status, rather than surfacing as a failure. A limit of 0 turns that one limit off. The graph already carried a separate hard step cap via `recursion_limit`, which is unchanged.
@@ -401,7 +458,7 @@ Request rate (~3 req/s peak), agent turns by route, per-node latency, a 93.9% re
 
 ### Testing
 
-- 148 tests, all passing, all offline — no test depends on a real paid API call. Run: `pytest tests/ -v`
+- 288 tests, all passing, and none depends on a real paid API call. Run: `pytest tests/ -v`. One further test covers the MongoDB audit backend against a real server and is skipped unless `AUDIT_MONGO_TEST_URI` is set, which makes 289 when a MongoDB is available.
 - `tests/test_security.py`: adversarial cases — direct injection, routing manipulation, obfuscation/padding, oversized input, malformed input — plus confirmation that legitimate queries across all three real routing categories are never falsely flagged, and a graph-level check (`TestGraphNeverCallsLLMOnBlock`) that a BLOCKed query never reaches the LLM.
 - `tests/test_failure_modes.py`: Tavily 429/timeout/5xx/4xx/connection-failure/invalid-key, LLM timeout/error, empty retrieval, malformed API requests, and unrecognized router output — all mocked, deterministic.
 
