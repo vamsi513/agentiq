@@ -12,7 +12,7 @@ actually deploy here.
 | nginx `Ingress`, hardcoded host     | `Route`, edge TLS, router-assigned host            | OpenShift has no nginx ingress controller |
 | `Namespace` object + `namespace:`   | none                                               | The sandbox doesn't allow creating namespaces |
 | `securityContext.runAsUser: 1000`   | `runAsNonRoot` only                                | `restricted-v2` assigns a UID from the namespace range; a fixed UID fails admission |
-| `ReadWriteMany` PVC for the index   | none — index baked into the image                  | The default storage class is `ReadWriteOnce`; can't back multiple replicas |
+| `ReadWriteMany` PVC for the index   | none, index baked into the image                  | The default storage class is `ReadWriteOnce`; can't back multiple replicas |
 | `image: agentiq:1.0.0`              | in-cluster registry ref, built by `build.yaml`     | No prebuilt image; on-cluster build avoids arch mismatch |
 | HPA on CPU + memory                 | HPA on CPU only, `minReplicas: 1`                  | Resident model size sits near a memory target at idle |
 
@@ -24,8 +24,7 @@ oc apply -f k8s/openshift/build.yaml
 oc start-build agentiq --from-dir=. --follow
 
 # 2. API keys. OPENAI_API_KEY is required; TAVILY_API_KEY is optional
-#    (web-search tool). AGENTIQ_API_KEY gates /chat and /chat/stream —
-#    callers must then send it as the X-API-Key header. Omit it only for
+#    (web-search tool). AGENTIQ_API_KEY gates /chat and /chat/stream: #    callers must then send it as the X-API-Key header. Omit it only for
 #    a throwaway demo on an unlisted route.
 oc create secret generic agentiq-secrets \
   --from-literal=OPENAI_API_KEY=... \
@@ -45,7 +44,7 @@ oc get route agentiq-api -o jsonpath='{.spec.host}'
 
 - `/health` is always public. `/chat` and `/chat/stream` require the
   `X-API-Key` header when `AGENTIQ_API_KEY` is in `agentiq-secrets`.
-- The `build.yaml` `resources` block is load-bearing — see the comment in
+- The `build.yaml` `resources` block is load-bearing, see the comment in
   that file.
 - The Developer Sandbox idles workloads after a period of inactivity; the
   first request after an idle period pays a cold start.

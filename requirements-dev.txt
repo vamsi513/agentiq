@@ -1,0 +1,13 @@
+# Development and test dependencies.
+#
+# requirements.txt is the deployment set and deliberately excludes test packages.
+# This file adds what you need to run the suite and the linter, so a clean clone
+# can follow the README and have `pytest tests/` work. CI installs this same file,
+# so a green run there and a green run locally are the same run.
+
+-r requirements.txt
+
+pytest==9.1.1
+pytest-asyncio==1.4.0
+ruff==0.9.10
+mongomock==4.3.0
