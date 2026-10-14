@@ -115,11 +115,16 @@ async def lifespan(app: FastAPI):
             "production deployment."
         )
 
+    # Must run before get_graph() -- the graph captures the checkpointer at
+    # build time, and the Postgres saver needs an event loop to set up. This
+    # one is deliberately outside the pre-warm try: when CHECKPOINT_DSN is set
+    # it means durable checkpoints are required, and CheckpointerInitError has
+    # to stop startup rather than be downgraded to a warning the way a slow
+    # graph pre-warm is.
+    from agent.memory import init_checkpointer
+    await init_checkpointer()
+
     try:
-        # Must run before get_graph() -- the graph captures the checkpointer
-        # at build time, and the Postgres saver needs an event loop to set up.
-        from agent.memory import init_checkpointer
-        await init_checkpointer()
         from agent.graph import get_graph
         get_graph()
         logger.info("Agent graph pre-warmed successfully.")
