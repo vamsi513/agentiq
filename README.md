@@ -165,7 +165,7 @@ every test runs offline.
 pytest tests/ -q
 ```
 
-291 pass and 1 is skipped. The skipped test covers the MongoDB audit backend
+297 pass and 1 is skipped. The skipped test covers the MongoDB audit backend
 against a real server and runs only when `AUDIT_MONGO_TEST_URI` is set.
 
 ---
