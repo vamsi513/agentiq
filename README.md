@@ -165,7 +165,7 @@ every test runs offline.
 pytest tests/ -q
 ```
 
-291 pass and 1 is skipped. The skipped test covers the MongoDB audit backend
+297 pass and 1 is skipped. The skipped test covers the MongoDB audit backend
 against a real server and runs only when `AUDIT_MONGO_TEST_URI` is set.
 
 ---
@@ -323,7 +323,7 @@ Receives the assembled context and full conversation history. Constructs a groun
 `configure_tracing()` is called at app startup. When `LANGCHAIN_API_KEY` is set, every graph run, including intermediate node transitions, token counts, and latencies, is streamed to LangSmith.
 
 ### Memory
-Every graph run is checkpointed under the session's `thread_id`. The full state graph is restored on each invocation for multi-turn coherence. MemorySaver (in-process) is the default; setting `CHECKPOINT_DSN` switches to `agent/memory.py`'s AsyncPostgresSaver so state survives a process restart, falling back to MemorySaver if Postgres is configured but unreachable.
+Every graph run is checkpointed under the session's `thread_id`. The full state graph is restored on each invocation for multi-turn coherence. MemorySaver (in-process) is the default; setting `CHECKPOINT_DSN` switches to `agent/memory.py`'s AsyncPostgresSaver so state survives a process restart. If `CHECKPOINT_DSN` is set and the saver cannot be initialised, startup fails with `CheckpointerInitError` rather than quietly reverting to MemorySaver: setting the DSN is a statement that checkpoints must be durable, and a silent fallback would leave the service looking healthy while the durability that was asked for is gone. With no DSN set, MemorySaver is used with no error.
 
 ---
 
@@ -471,7 +471,7 @@ Request rate (~3 req/s peak), agent turns by route, per-node latency, a 93.9% re
 
 ### Testing
 
-- 291 tests, all passing, and none depends on a real paid API call. Run: `pytest tests/ -v`. One further test covers the MongoDB audit backend against a real server and is skipped unless `AUDIT_MONGO_TEST_URI` is set, which makes 292 when a MongoDB is available.
+- 297 tests, all passing, and none depends on a real paid API call. Run: `pytest tests/ -v`. One further test covers the MongoDB audit backend against a real server and is skipped unless `AUDIT_MONGO_TEST_URI` is set, which makes 298 when a MongoDB is available.
 - `tests/test_security.py`: adversarial cases, direct injection, routing manipulation, obfuscation/padding, oversized input, malformed input, plus confirmation that legitimate queries across all three real routing categories are never falsely flagged, and a graph-level check (`TestGraphNeverCallsLLMOnBlock`) that a BLOCKed query never reaches the LLM.
 - `tests/test_failure_modes.py`: Tavily 429/timeout/5xx/4xx/connection-failure/invalid-key, LLM timeout/error, empty retrieval, malformed API requests, and unrecognized router output, all mocked, deterministic.
 
