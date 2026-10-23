@@ -93,6 +93,14 @@ class Settings:
         self.mock_tavily: bool = os.getenv("AGENTIQ_MOCK_TAVILY", "").lower() in ("1", "true", "yes")
         self.mock_fail_pct: float = float(os.getenv("AGENTIQ_MOCK_FAIL_PCT", "0") or "0")
 
+        # Which agent graph runs. "single" is the original workflow:
+        # security, router, one source, generator. "multi" runs the planner,
+        # parallel researchers, verifier and writer under a deterministic
+        # supervisor. Anything unrecognised falls back to "single" so a typo
+        # cannot silently change which graph serves traffic.
+        _mode = os.getenv("AGENT_MODE", "single").strip().lower()
+        self.agent_mode: str = _mode if _mode in ("single", "multi") else "single"
+
         # Retrieval settings
         self.top_k_retrieval: int = int(os.getenv("TOP_K_RETRIEVAL", "5"))
         self.max_web_results: int = int(os.getenv("MAX_WEB_RESULTS", "5"))
