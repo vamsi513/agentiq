@@ -1043,3 +1043,53 @@ class TestRecursionLimit:
         # verify, retry research, rewrite, re-verify, then supervisor+publish.
         longest_intended = 2 + 2 * 7 + 1
         assert longest_intended < _MULTI_RECURSION_LIMIT
+
+
+# -- Token accounting -------------------------------------------------------
+
+
+class TestTokenAccounting:
+    def test_production_model_requests_usage_on_streamed_responses(self):
+        """streaming=True omits usage unless include_usage is requested.
+
+        Without it usage_metadata is None on every call, so nothing is
+        charged and BUDGET_MAX_TOKENS never fires however much a run spends.
+        """
+        from agent.nodes import _STREAM_USAGE_KWARGS
+
+        assert _STREAM_USAGE_KWARGS["stream_options"]["include_usage"] is True
+
+    def test_llm_is_constructed_with_the_usage_kwargs(self):
+        import agent.nodes as nodes
+
+        original = nodes._llm
+        nodes._llm = None
+        try:
+            with patch("agent.nodes.ChatOpenAI") as ctor:
+                nodes._get_llm()
+            kwargs = ctor.call_args.kwargs
+            assert kwargs["model_kwargs"] == nodes._STREAM_USAGE_KWARGS
+            assert kwargs["streaming"] is True
+        finally:
+            nodes._llm = original
+
+    @pytest.mark.parametrize("node_name", ["router", "direct"])
+    def test_single_agent_nodes_charge_their_tokens(self, node_name):
+        """Previously only the generator charged, so the budget undercounted."""
+        from agent.budgets import Budget, BudgetTracker, reset_tracker, set_tracker
+        from agent.nodes import direct_node, router_node
+
+        model = MagicMock()
+        model.invoke.return_value = _response("direct", tokens=123)
+
+        tracker = BudgetTracker(budget=Budget(max_tokens=0))
+        token = set_tracker(tracker)
+        try:
+            with patch("agent.nodes._get_llm", return_value=model):
+                if node_name == "router":
+                    router_node(_state())
+                else:
+                    direct_node(_state())
+        finally:
+            reset_tracker(token)
+        assert tracker.tokens == 123
