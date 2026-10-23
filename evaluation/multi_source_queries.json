@@ -1,0 +1,86 @@
+[
+  {
+    "id": 101,
+    "question": "Explain what LoRA does to adapt a large language model, and separately say what has changed most recently in parameter efficient fine tuning.",
+    "ground_truth": "LoRA freezes the pretrained weights and injects trainable low rank decomposition matrices into the layers, so only a small number of parameters are updated during fine tuning, which cuts memory and storage cost sharply while keeping inference latency unchanged because the low rank update can be merged back into the base weights. The answer must also address the second part about recent developments in parameter efficient fine tuning, rather than answering only the first part.",
+    "context_type": "mixed",
+    "needs_sources": ["documents", "web"]
+  },
+  {
+    "id": 102,
+    "question": "What problem does FlashAttention solve, and what is the current state of attention efficiency work?",
+    "ground_truth": "FlashAttention is an IO aware exact attention algorithm. It reduces the number of reads and writes between GPU high bandwidth memory and on chip SRAM by tiling the computation and recomputing intermediates in the backward pass, which makes attention faster and far more memory efficient without approximating the result. The answer must also address the second part about the current state of attention efficiency work.",
+    "context_type": "mixed",
+    "needs_sources": ["documents", "web"]
+  },
+  {
+    "id": 103,
+    "question": "Describe how Mixture of Experts models achieve sparse activation, and note any recent MoE model releases.",
+    "ground_truth": "Mixture of Experts replaces a dense feed forward layer with many expert subnetworks plus a router that activates only a small number of experts per token, so total parameter count grows while the compute per token stays roughly constant. The answer must also address the second part about recent MoE releases.",
+    "context_type": "mixed",
+    "needs_sources": ["documents", "web"]
+  },
+  {
+    "id": 104,
+    "question": "How does RLHF align a language model, and what alternatives to it are being used now?",
+    "ground_truth": "RLHF collects human preference comparisons between model outputs, trains a reward model on those preferences, and then optimises the language model against that reward model with reinforcement learning, typically PPO, with a KL penalty against the original policy to stop it drifting. The answer must also address the second part about alternatives currently in use.",
+    "context_type": "mixed",
+    "needs_sources": ["documents", "web"]
+  },
+  {
+    "id": 105,
+    "question": "What is retrieval augmented generation and what is the latest thinking on RAG system design?",
+    "ground_truth": "Retrieval augmented generation combines a retriever that fetches relevant passages from an external corpus with a generator that conditions on those passages, so the model can ground its output in source material it was not trained on and the corpus can be updated without retraining. The answer must also address the second part about current thinking on RAG system design.",
+    "context_type": "mixed",
+    "needs_sources": ["documents", "web"]
+  },
+  {
+    "id": 106,
+    "question": "Explain rotary position embeddings, and say what context lengths are available in current models.",
+    "ground_truth": "Rotary position embeddings encode position by rotating the query and key vectors by an angle proportional to their absolute position, so the dot product between them depends only on their relative distance. This gives relative position behaviour with absolute position bookkeeping and extends to longer contexts through interpolation or base frequency scaling. The answer must also address the second part about context lengths in current models.",
+    "context_type": "mixed",
+    "needs_sources": ["documents", "web"]
+  },
+  {
+    "id": 107,
+    "question": "What does speculative decoding do to speed up inference, and is it in production use today?",
+    "ground_truth": "Speculative decoding uses a small fast draft model to propose several tokens ahead, then verifies them in a single forward pass of the large target model, accepting the longest correct prefix. Because verification is parallel, it produces the same output distribution as the target model while cutting wall clock latency. The answer must also address the second part about production use today.",
+    "context_type": "mixed",
+    "needs_sources": ["documents", "web"]
+  },
+  {
+    "id": 108,
+    "question": "Describe the quantization techniques used to shrink LLMs, and what precision formats are common now.",
+    "ground_truth": "Quantization reduces the numeric precision of weights and sometimes activations. GPTQ does post training layer wise quantization using second order information to limit error, QLoRA fine tunes adapters on top of a frozen 4 bit base model, and INT8 inference keeps accuracy by handling outlier channels separately. The answer must also address the second part about precision formats in common use now.",
+    "context_type": "mixed",
+    "needs_sources": ["documents", "web"]
+  },
+  {
+    "id": 109,
+    "question": "How does the ReAct framework structure an agent loop, and which agent frameworks are most used currently?",
+    "ground_truth": "ReAct interleaves reasoning traces with actions: the model emits a thought, then an action that calls a tool, then receives an observation, and repeats. Making the reasoning explicit between tool calls lets the model plan, react to tool output and recover from errors rather than committing to a single plan up front. The answer must also address the second part about which agent frameworks are most used currently.",
+    "context_type": "mixed",
+    "needs_sources": ["documents", "web"]
+  },
+  {
+    "id": 110,
+    "question": "What are the standard LLM evaluation benchmarks described in the literature, and what benchmarks are being used most recently?",
+    "ground_truth": "HELM evaluates models across many scenarios and metrics including accuracy, calibration, robustness, fairness and efficiency. BIG-Bench is a large collaborative benchmark of diverse tasks aimed at capabilities beyond current models. MMLU measures multitask accuracy across 57 subjects using multiple choice questions. The answer must also address the second part about benchmarks used most recently.",
+    "context_type": "mixed",
+    "needs_sources": ["documents", "web"]
+  },
+  {
+    "id": 111,
+    "question": "Explain semantic chunking for RAG systems, and what chunking practices are recommended today.",
+    "ground_truth": "Semantic chunking splits a document at meaning boundaries rather than at a fixed token count, for example by grouping sentences whose embeddings stay similar and cutting where similarity drops, so a retrieved chunk is a coherent passage instead of an arbitrary window that may cut a thought in half. The answer must also address the second part about recommended chunking practices today.",
+    "context_type": "mixed",
+    "needs_sources": ["documents", "web"]
+  },
+  {
+    "id": 112,
+    "question": "What coordination architectures exist for multi agent LLM systems, and what is the current practical view on whether multi agent helps?",
+    "ground_truth": "Coordination architectures include a centralised supervisor or orchestrator that assigns work to specialist agents, decentralised peer to peer message passing between agents, and hierarchical arrangements where agents themselves delegate to sub agents. Shared state or a blackboard is commonly used to pass intermediate results between them. The answer must also address the second part about the current practical view on whether multi agent systems help.",
+    "context_type": "mixed",
+    "needs_sources": ["documents", "web"]
+  }
+]
