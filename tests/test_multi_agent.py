@@ -1093,3 +1093,68 @@ class TestTokenAccounting:
         finally:
             reset_tracker(token)
         assert tracker.tokens == 123
+
+
+# -- The no lookup path -----------------------------------------------------
+
+
+class TestNoLookupPath:
+    """A conversational question needs no source, so research_rounds stays 0.
+
+    Any supervisor branch keyed on rounds == 0 alone keeps returning write and
+    never terminates. This is what sent every direct query on the dev set into
+    a GraphRecursionError.
+    """
+
+    def test_supervisor_does_not_loop_on_write_when_no_source_is_planned(self):
+        from agent.multi.supervisor import decide_next
+
+        plan = [{"id": "s1", "question": "say hello", "source": SOURCE_NONE}]
+        # First pass: nothing drafted yet.
+        assert decide_next(_state(plan=plan)) == (PHASE_WRITE, None)
+        # Second pass: a draft now exists, so it must move on, not rewrite.
+        drafted = _state(plan=plan, draft="Hello.", draft_version=1, drafted_evidence_count=0)
+        assert decide_next(drafted)[0] == PHASE_VERIFY
+
+    def test_no_lookup_run_terminates_with_a_stop_reason(self):
+        from agent.multi.supervisor import MAX_SUPERVISOR_STEPS, decide_next
+        from agent.multi.verifier import verifier_node
+        from agent.multi.writer import publish_node, writer_node
+
+        state = _state(plan=[{"id": "s1", "question": "say hello", "source": SOURCE_NONE}])
+        model = _llm_router({_WRITER: "Hello.", _VERIFIER: ""})
+
+        # Drive the loop by hand so a non-terminating supervisor shows up as a
+        # step count rather than as a recursion error from the graph runner.
+        with patch("agent.nodes._get_llm", return_value=model):
+            for _ in range(MAX_SUPERVISOR_STEPS + 2):
+                phase, stop = decide_next(state)
+                if phase == PHASE_DONE:
+                    break
+                if phase == PHASE_WRITE:
+                    state.update(writer_node(state))
+                elif phase == PHASE_VERIFY:
+                    state.update(verifier_node(state))
+                state["supervisor_steps"] = state.get("supervisor_steps", 0) + 1
+            else:
+                pytest.fail("supervisor did not terminate on the no lookup path")
+
+        assert phase == PHASE_DONE
+        assert stop is not None
+        state.update(publish_node(state))
+        assert state["turn_count"] == 1
+
+    def test_direct_question_runs_end_to_end_without_a_recursion_error(self):
+        model = _llm_router(
+            {
+                _PLANNER: "none | Greet the user politely in reply",
+                _WRITER: "Hello, how can I help?",
+                _VERIFIER: "",
+            }
+        )
+        out = _run_graph(_state(query="hello there"), model, [], [])
+
+        assert out["error"] != "GraphRecursionError"
+        assert out["stop_reason"] is not None
+        assert sum(isinstance(m, AIMessage) for m in out["messages"]) == 1
+        assert out["turn_count"] == 1

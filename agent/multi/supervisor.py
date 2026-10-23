@@ -70,12 +70,13 @@ def decide_next(state: MultiAgentState) -> tuple[str, str | None]:
     if steps >= MAX_SUPERVISOR_STEPS:
         return PHASE_DONE, STOP_STEP_LIMIT
 
-    # Nothing researched yet. Dispatch the researchers when the plan asks for a
-    # real source, otherwise go straight to writing.
-    if rounds == 0:
-        if planned_sources(state):
-            return PHASE_RESEARCH, None
-        return PHASE_WRITE, None
+    # Nothing researched yet and the plan asks for a real source. This is the
+    # only branch that may short-circuit the draft and verify checks below,
+    # and it must not fire when the plan needs no lookup: a conversational
+    # question leaves research_rounds at zero forever, so a branch keyed on
+    # "rounds == 0" alone would keep returning write and never terminate.
+    if rounds == 0 and planned_sources(state):
+        return PHASE_RESEARCH, None
 
     draft_version = state.get("draft_version", 0)
 
