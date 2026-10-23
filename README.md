@@ -289,6 +289,86 @@ The full RAGAS pipeline is triggered via the **RAGAS Evaluation** workflow in Gi
 
 ---
 
+## Multi Agent Mode
+
+`AGENT_MODE=multi` swaps the single agent workflow for a graph of five agents
+under a deterministic supervisor. `AGENT_MODE=single` is the default and is
+unchanged.
+
+```
+security -> planner -> supervisor -> [doc_researcher | web_researcher] -> supervisor
+                                  -> writer                            -> supervisor
+                                  -> verifier                          -> supervisor
+                                  -> publish -> END
+```
+
+- **Planner** breaks the question into at most four sub questions, each tagged
+  with the source that should answer it: documents, web, or none.
+- **Researchers** run in parallel, one per source. Each owns a different tool,
+  a different prompt and a different slice of state, so neither can overwrite
+  the other's work. Retrieved passages carry stable ids and are the evidence
+  of record; each researcher's prose summary orients the writer but is never
+  citable.
+- **Verifier** scores each claim in the draft as supported or unsupported
+  against that evidence, and may name one lookup that would close a gap. A
+  cited id the run never produced is discarded, because a hallucinated
+  citation is indistinguishable from a real one once a support rate is
+  computed.
+- **Writer** produces the answer with inline citations, and says what the
+  evidence does not cover rather than filling the gap.
+- **Supervisor** is a pure function of state with no model call in it. One
+  retry, two research rounds and ten supervisor turns are the caps; the
+  longest intended path uses seven turns, so the other two are backstops.
+
+The security gate, per run budgets, log redaction and the tool audit log all
+apply unchanged. Every agent emits one audit record with its redacted input
+and output summary, the tokens the provider reported, and its latency.
+
+### Does it work better? Mostly no
+
+Both modes were run over the same 62 questions and graded by the same judges.
+Full numbers, method and limitations are in
+[`results/mode_comparison_summary.md`](results/mode_comparison_summary.md).
+
+Held out half, 32 questions, differences are multi minus single with a paired
+95% bootstrap interval:
+
+| Metric | Single | Multi | Difference |
+|---|---|---|---|
+| Answer correctness | 0.703 | 0.719 | +0.016 [-0.078, +0.109] not significant |
+| Citation support rate | 0.918 | 0.780 | -0.143 [-0.237, -0.040] **worse** |
+| Unsupported claim rate | 0.082 | 0.220 | |
+| Latency p50 | 2740 ms | 8314 ms | +4137 ms **slower** |
+| Cost per query | $0.00029 | $0.00079 | +$0.0005 **2.7x** |
+
+**Correctness did not improve.** The difference is not significant on either
+half and its sign flips between them.
+
+**Grounding got worse**, significantly, on both halves. That is the opposite
+of what adding a verifier was meant to do. It is not explained by longer
+answers: both modes make 6.4 claims per answer and 159 claims in total on the
+held out half. Multi makes the same number of claims and grounds fewer of
+them. A hypothesis for why, and the ablation that would test it, are in the
+results summary.
+
+**It is about three times slower and 2.7 times more expensive.**
+
+**The multi source questions did not settle the question they were written
+for.** Correctness ties on both halves. Provenance counts show the
+architecture working as designed, with every mixed dev question using both
+sources under multi while single reached the web on none of them, but the
+document corpus already covers the recent half of those questions, so the
+second source changed no answer.
+
+On this evidence the multi agent graph is not worth turning on for this
+workload. It is kept behind a setting, off by default.
+
+```bash
+AGENT_MODE=multi python -m evaluation.compare_modes --split dev --estimate-only
+```
+
+---
+
 ## How It Works
 
 ### Security Node
