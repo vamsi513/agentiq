@@ -27,10 +27,14 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessage, HumanMessage
 
-from agent.multi.prompts import WRITER_REVISION_SUFFIX, WRITER_SYSTEM
-from agent.multi.state import MultiAgentState, all_evidence
+from agent.multi.prompts import (
+    DIRECT_WRITER_SYSTEM,
+    WRITER_REVISION_SUFFIX,
+    WRITER_SYSTEM,
+)
+from agent.multi.state import MultiAgentState, all_evidence, planned_sources
 from agent.multi.trace import agent_step, charge_response
 from agent.multi.verifier import format_evidence
 
@@ -44,6 +48,31 @@ NO_EVIDENCE_ANSWER = (
 WRITER_ERROR_ANSWER = (
     "I encountered an error while writing the answer. Please try again."
 )
+
+
+def _answer_without_evidence(query: str, state: MultiAgentState) -> str:
+    """Answer a question the plan decided needed no lookup.
+
+    Carries prior turns so a conversational exchange keeps its thread, which
+    is what the single agent direct route does.
+    """
+    history: list[dict[str, str]] = [{"role": "system", "content": DIRECT_WRITER_SYSTEM}]
+    for message in (state.get("messages") or [])[:-1]:
+        if isinstance(message, HumanMessage):
+            history.append({"role": "user", "content": message.content})
+        elif isinstance(message, AIMessage):
+            history.append({"role": "assistant", "content": message.content})
+    history.append({"role": "user", "content": query})
+
+    try:
+        from agent.nodes import _get_llm
+
+        response = _get_llm().invoke(history)
+        charge_response(response)
+        return str(response.content)
+    except Exception:
+        logger.exception("Conversational writer call failed.")
+        return WRITER_ERROR_ANSWER
 
 
 def _unsupported_notes(state: MultiAgentState) -> str:
@@ -103,7 +132,23 @@ def writer_node(state: MultiAgentState) -> dict[str, Any]:
     evidence = all_evidence(state)
 
     if not evidence:
-        logger.info("Writer has no evidence, returning the fixed no-evidence answer.")
+        # Two different situations produce no evidence, and they call for
+        # opposite answers.
+        #
+        # The plan asked for no lookup at all: a greeting, or a general
+        # knowledge question outside the corpus. Nothing was searched because
+        # nothing needed to be, so answering from model knowledge is right and
+        # refusing would be obtuse. This is the single agent graph's direct
+        # route, which the multi agent graph otherwise has no equivalent of.
+        #
+        # The plan asked for a source and the lookup came back empty: refuse.
+        # Falling back to model knowledge here would quietly turn a failed
+        # retrieval into a confident ungrounded answer, which is the exact
+        # failure the evidence discipline exists to prevent.
+        if not planned_sources(state):
+            logger.info("Plan asked for no lookup, answering from model knowledge.")
+            return _draft_update(state, _answer_without_evidence(query, state))
+        logger.info("Lookup returned nothing, returning the fixed no-evidence answer.")
         return _draft_update(state, NO_EVIDENCE_ANSWER)
 
     is_revision = bool(state.get("verdicts")) and state.get("unsupported_count", 0) > 0

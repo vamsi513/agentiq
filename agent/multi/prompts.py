@@ -14,9 +14,9 @@ into a prompt cannot cause a call that the graph does not already allow.
 PLANNER_SYSTEM = """You break a research question into the smallest set of sub questions needed to answer it.
 
 For each sub question, say which source should answer it:
-- documents: background and reference material on AI, machine learning, LLMs, transformers, embeddings, retrieval, RAG, RLHF, agent frameworks and related topics.
+- documents: anything about AI, machine learning, LLMs, transformers, BERT, embeddings, retrieval, RAG, RLHF, fine tuning, quantization, agents or related technical topics. Use this whenever the sub question is technical, even if you believe you already know the answer. The point is to ground the answer in a source, not to recall it.
 - web: anything that changes over time, such as news, prices, releases, dates, current events or the present state of something.
-- none: the sub question can be answered from general knowledge with no lookup.
+- none: only for conversational turns such as greetings and questions about this assistant, or for everyday general knowledge that is plainly outside the technical topics above.
 
 Rules:
 - Emit between 1 and 4 sub questions. Prefer fewer. A simple question needs exactly one.
@@ -96,3 +96,14 @@ MISSING | web | the precise question to look up
 
 Omit the MISSING line when the gap cannot be closed by a lookup, or when every
 claim is supported."""
+
+
+DIRECT_WRITER_SYSTEM = """You are AgentIQ, a helpful research assistant.
+
+Answer the user's question directly and conversationally from your own
+knowledge. For greetings, respond warmly. For general knowledge questions,
+answer plainly. Keep answers concise and clear.
+
+You are answering without retrieved sources because this question did not
+need any, so do not cite sources and do not claim the answer came from a
+document."""

@@ -1158,3 +1158,82 @@ class TestNoLookupPath:
         assert out["stop_reason"] is not None
         assert sum(isinstance(m, AIMessage) for m in out["messages"]) == 1
         assert out["turn_count"] == 1
+
+
+# -- The conversational path ------------------------------------------------
+
+
+class TestConversationalPath:
+    """No evidence has two causes that call for opposite answers.
+
+    A plan of only none steps means nothing needed looking up, so answering
+    from model knowledge is right. A plan that asked for a source and came
+    back empty must still refuse, or a failed retrieval quietly becomes a
+    confident ungrounded answer.
+    """
+
+    def test_no_lookup_planned_answers_from_model_knowledge(self):
+        from agent.multi.writer import NO_EVIDENCE_ANSWER, writer_node
+
+        state = _state(
+            query="What is the chemical symbol for gold?",
+            plan=[{"id": "s1", "question": "symbol for gold", "source": SOURCE_NONE}],
+        )
+        model = _llm_router({"helpful research assistant": "The symbol for gold is Au."})
+        with patch("agent.nodes._get_llm", return_value=model):
+            out = writer_node(state)
+        assert out["draft"] == "The symbol for gold is Au."
+        assert out["draft"] != NO_EVIDENCE_ANSWER
+
+    def test_lookup_that_returned_nothing_still_refuses(self):
+        from agent.multi.writer import NO_EVIDENCE_ANSWER, writer_node
+
+        state = _state(
+            query="What does the corpus say about X?",
+            plan=[{"id": "s1", "question": "about X", "source": SOURCE_DOCUMENTS}],
+        )
+        model = MagicMock()
+        model.invoke.side_effect = AssertionError(
+            "must not answer from model knowledge after an empty lookup"
+        )
+        with patch("agent.nodes._get_llm", return_value=model):
+            out = writer_node(state)
+        assert out["draft"] == NO_EVIDENCE_ANSWER
+
+    def test_conversational_answer_carries_prior_turns(self):
+        from agent.multi.writer import writer_node
+
+        seen = {}
+
+        def invoke(messages):
+            seen["messages"] = messages
+            return _response("Hello again.")
+
+        model = MagicMock()
+        model.invoke = invoke
+        state = _state(
+            query="and what was my first question?",
+            plan=[{"id": "s1", "question": "recall", "source": SOURCE_NONE}],
+            messages=[
+                HumanMessage(content="hello"),
+                AIMessage(content="Hi there."),
+                HumanMessage(content="and what was my first question?"),
+            ],
+        )
+        with patch("agent.nodes._get_llm", return_value=model):
+            writer_node(state)
+        roles = [m["role"] for m in seen["messages"]]
+        assert roles[0] == "system"
+        assert "assistant" in roles
+
+    def test_conversational_question_runs_end_to_end_and_answers(self):
+        model = _llm_router(
+            {
+                _PLANNER: "none | Greet the user in reply",
+                "helpful research assistant": "Hello, I am AgentIQ.",
+                _VERIFIER: "",
+            }
+        )
+        out = _run_graph(_state(query="hello there"), model, [], [])
+        assert out["draft"] == "Hello, I am AgentIQ."
+        assert out["turn_count"] == 1
