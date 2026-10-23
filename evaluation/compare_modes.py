@@ -451,6 +451,15 @@ async def run_mode(
                 "model_calls": usage["calls"],
                 "cost_usd": usage["cost_usd"],
                 "num_sources": len(result.get("sources", []) or []),
+                # Split by provenance so a mixed question can be checked for
+                # whether both sources actually contributed, rather than
+                # assuming the plan's intent was carried out.
+                "doc_sources": sum(
+                    1 for s in (result.get("sources") or []) if s.get("type") == "retrieval"
+                ),
+                "web_sources": sum(
+                    1 for s in (result.get("sources") or []) if s.get("type") == "web_search"
+                ),
                 "route_decision": result.get("route_decision", ""),
                 "error": failed,
             }
@@ -569,6 +578,15 @@ def summarise(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "cost_per_query_usd": round(statistics.fmean(r["cost_usd"] for r in rows), 6),
         "total_cost_usd": round(sum(r["cost_usd"] for r in rows), 4),
         "errors": sum(1 for r in rows if r["error"]),
+        "queries_using_both_sources": sum(
+            1 for r in rows if r.get("doc_sources") and r.get("web_sources")
+        ),
+        "web_sources_per_query": round(
+            statistics.fmean(r.get("web_sources", 0) for r in rows), 2
+        ),
+        "doc_sources_per_query": round(
+            statistics.fmean(r.get("doc_sources", 0) for r in rows), 2
+        ),
         "answers_with_no_claims": sum(1 for r in rows if not r["claims"]),
     }
 
