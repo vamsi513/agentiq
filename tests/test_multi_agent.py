@@ -988,3 +988,58 @@ class TestSingleModeUnchanged:
         compiled = build_graph()
         nodes = set(compiled.get_graph().nodes)
         assert {"security", "router", "retriever", "web_search", "direct", "generator"} <= nodes
+
+
+# -- Super-step budget ------------------------------------------------------
+
+
+class TestRecursionLimit:
+    def test_single_mode_keeps_its_original_ceiling(self):
+        from agent.memory import _RECURSION_LIMIT, recursion_limit_for
+
+        assert recursion_limit_for("single") == _RECURSION_LIMIT == 8
+
+    def test_multi_mode_gets_a_ceiling_sized_for_its_own_worst_case(self):
+        from agent.memory import _MULTI_RECURSION_LIMIT, recursion_limit_for
+        from agent.multi.supervisor import MAX_SUPERVISOR_STEPS
+
+        # security + planner + (supervisor + agent) per turn + publish.
+        worst_case = 2 + 2 * MAX_SUPERVISOR_STEPS + 1
+        assert recursion_limit_for("multi") == _MULTI_RECURSION_LIMIT
+        assert _MULTI_RECURSION_LIMIT > worst_case - 1
+        # Stays under LangGraph's own default, so it is still a real cap.
+        assert _MULTI_RECURSION_LIMIT < 25
+
+    def test_supervisor_cap_binds_before_the_recursion_limit(self):
+        """A run that will not settle must end with a stop_reason, not an exception."""
+        from agent.memory import _MULTI_RECURSION_LIMIT
+        from agent.multi.supervisor import MAX_SUPERVISOR_STEPS
+
+        worst_case_supersteps = 2 + 2 * MAX_SUPERVISOR_STEPS + 1
+        assert worst_case_supersteps <= _MULTI_RECURSION_LIMIT
+
+    def test_thread_config_tracks_the_configured_mode(self):
+        from agent.memory import (
+            _MULTI_RECURSION_LIMIT,
+            _RECURSION_LIMIT,
+            get_thread_config,
+        )
+        from config import settings
+
+        original = settings.agent_mode
+        try:
+            settings.agent_mode = "single"
+            assert get_thread_config("s")["recursion_limit"] == _RECURSION_LIMIT
+            settings.agent_mode = "multi"
+            assert get_thread_config("s")["recursion_limit"] == _MULTI_RECURSION_LIMIT
+        finally:
+            settings.agent_mode = original
+
+    def test_longest_intended_path_fits_well_inside_the_limit(self):
+        """The retry path must not be the thing that trips the ceiling."""
+        from agent.memory import _MULTI_RECURSION_LIMIT
+
+        # security, planner, then supervisor+agent for research, write,
+        # verify, retry research, rewrite, re-verify, then supervisor+publish.
+        longest_intended = 2 + 2 * 7 + 1
+        assert longest_intended < _MULTI_RECURSION_LIMIT
