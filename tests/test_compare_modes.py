@@ -336,3 +336,73 @@ class TestEstimate:
         from evaluation.compare_modes import PRICE_INPUT_PER_M
 
         assert estimate(1)["prices"]["input_per_million_usd"] == PRICE_INPUT_PER_M
+
+
+# -- Metering the agent -----------------------------------------------------
+
+
+class TestAgentMetering:
+    def test_metered_agent_counts_agent_calls_and_restores_the_accessor(self):
+        """Agent tokens were silently zero because only the judge was wrapped."""
+        import agent.nodes as nodes
+
+        from evaluation.compare_modes import metered_agent
+
+        meter = Meter(cap_usd=1.0)
+        original = nodes._get_llm
+        inner = _model("hi")
+        nodes._get_llm = lambda: inner
+        try:
+            with metered_agent(meter):
+                nodes._get_llm().invoke([])
+                nodes._get_llm().invoke([])
+            assert meter.calls == 2
+            assert meter.input_tokens == 200
+            # The accessor must be put back, or later work stays wrapped.
+            assert nodes._get_llm is not original
+            assert nodes._get_llm() is inner
+        finally:
+            nodes._get_llm = original
+
+    def test_accessor_is_restored_even_when_the_run_raises(self):
+        import agent.nodes as nodes
+
+        from evaluation.compare_modes import metered_agent
+
+        original = nodes._get_llm
+        sentinel = object()
+        nodes._get_llm = lambda: sentinel
+        try:
+            with pytest.raises(RuntimeError):
+                with metered_agent(Meter(cap_usd=1.0)):
+                    raise RuntimeError("run blew up")
+            assert nodes._get_llm() is sentinel
+        finally:
+            nodes._get_llm = original
+
+
+class TestSpendCapAcrossMeters:
+    def test_cap_governs_agent_and_judge_spend_together(self):
+        agent_meter = Meter(cap_usd=0.0001, name="agent")
+        judge_meter = Meter(cap_usd=0.0001, name="judge")
+        agent_meter.sibling = judge_meter
+        judge_meter.sibling = agent_meter
+
+        judge_meter.record(_response("x", tokens_in=1000, tokens_out=1000))
+        # The agent spent nothing, but the shared cap is already used up.
+        assert agent_meter.cost_usd == 0.0
+        with pytest.raises(SpendCapExceeded):
+            agent_meter.check()
+
+    def test_reported_cost_per_query_excludes_judging(self):
+        """Judging is measurement apparatus, not a cost a deployment pays."""
+        agent_meter = Meter(cap_usd=1.0, name="agent")
+        judge_meter = Meter(cap_usd=1.0, name="judge")
+        agent_meter.sibling = judge_meter
+
+        before = agent_meter.snapshot()
+        agent_meter.record(_response("x", tokens_in=500, tokens_out=100))
+        judge_meter.record(_response("x", tokens_in=9000, tokens_out=900))
+        delta = agent_meter.delta(before)
+        assert delta["input_tokens"] == 500
+        assert delta["output_tokens"] == 100

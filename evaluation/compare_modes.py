@@ -38,6 +38,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import contextlib
 import json
 import logging
 import random
@@ -78,18 +79,26 @@ class SpendCapExceeded(RuntimeError):
 
 
 class Meter:
-    """Counts tokens and dollars across every model call in a run.
+    """Counts tokens and dollars across model calls.
 
     Wraps the model object that agent.nodes._get_llm returns, so both modes
     are measured by the same code and neither can be counted differently from
     the other. Per query totals are read by snapshotting before and after.
+
+    Two meters are used per run: one for the agent and one for the judges.
+    Judging is measurement apparatus, not a cost the deployed system would
+    pay, so it is excluded from the reported cost per query. It still counts
+    against the spend cap, which is why a meter can be given a ``sibling``
+    whose spend is included when the cap is checked.
     """
 
-    def __init__(self, cap_usd: float) -> None:
+    def __init__(self, cap_usd: float, name: str = "agent") -> None:
         self.cap_usd = cap_usd
+        self.name = name
         self.input_tokens = 0
         self.output_tokens = 0
         self.calls = 0
+        self.sibling: "Meter | None" = None
 
     @property
     def cost_usd(self) -> float:
@@ -114,10 +123,16 @@ class Meter:
             "cost_usd": round(self.cost_usd - before["cost_usd"], 6),
         }
 
+    @property
+    def combined_cost_usd(self) -> float:
+        """This meter's spend plus its sibling's, which is what the cap governs."""
+        return self.cost_usd + (self.sibling.cost_usd if self.sibling else 0.0)
+
     def check(self) -> None:
-        if self.cost_usd >= self.cap_usd:
+        total = self.combined_cost_usd
+        if total >= self.cap_usd:
             raise SpendCapExceeded(
-                f"spend cap reached: ${self.cost_usd:.4f} of ${self.cap_usd:.2f}"
+                f"spend cap reached: ${total:.4f} of ${self.cap_usd:.2f}"
             )
 
     def record(self, response: Any) -> None:
@@ -359,6 +374,25 @@ def _reset_graph_for(mode: str) -> None:
     graph_module._graph_mode = None
 
 
+@contextlib.contextmanager
+def metered_agent(meter: Meter):
+    """Route every agent model call through ``meter``.
+
+    agent.nodes._get_llm is the single accessor both modes use, so wrapping it
+    counts the planner, researchers, writer and verifier in multi mode and the
+    router, retriever rewrite, direct and generator calls in single mode, with
+    no per mode bookkeeping that could drift between them.
+    """
+    import agent.nodes as nodes
+
+    original = nodes._get_llm
+    nodes._get_llm = lambda: meter.wrap(original())
+    try:
+        yield
+    finally:
+        nodes._get_llm = original
+
+
 async def run_mode(
     mode: str, queries: list[dict[str, Any]], meter: Meter, judge
 ) -> list[dict[str, Any]]:
@@ -375,7 +409,8 @@ async def run_mode(
         before = meter.snapshot()
         started = time.perf_counter()
         try:
-            result = await run_one(question, f"cmp-{mode}-{stamp}-q{item['id']}")
+            with metered_agent(meter):
+                result = await run_one(question, f"cmp-{mode}-{stamp}-q{item['id']}")
             failed = None
         except SpendCapExceeded:
             raise
@@ -384,6 +419,8 @@ async def run_mode(
             result = {"answer": "", "sources": [], "context": "", "route_decision": "error"}
             failed = f"{type(exc).__name__}"
         latency_ms = round((time.perf_counter() - started) * 1000, 1)
+        # Taken before judging, so the reported cost per query is the agent's
+        # own spend and never includes the grading calls below.
         usage = meter.delta(before)
 
         answer = result.get("answer", "") or ""
@@ -639,13 +676,19 @@ def main() -> None:
     if args.estimate_only:
         return
 
-    meter = Meter(cap_usd=args.cap)
-    judge = _judge_model(meter)
+    # Separate meters so the reported cost per query is the agent's own spend.
+    # Judging is measurement apparatus and would not exist in a deployment, so
+    # it is excluded from that figure while still counting against the cap.
+    agent_meter = Meter(cap_usd=args.cap, name="agent")
+    judge_meter = Meter(cap_usd=args.cap, name="judge")
+    agent_meter.sibling = judge_meter
+    judge_meter.sibling = agent_meter
+    judge = _judge_model(judge_meter)
     stopped_early = None
 
     try:
-        single_rows = asyncio.run(run_mode("single", selected, meter, judge))
-        multi_rows = asyncio.run(run_mode("multi", selected, meter, judge))
+        single_rows = asyncio.run(run_mode("single", selected, agent_meter, judge))
+        multi_rows = asyncio.run(run_mode("multi", selected, agent_meter, judge))
     except SpendCapExceeded as exc:
         stopped_early = str(exc)
         logger.error("Stopping: %s", exc)
@@ -660,7 +703,9 @@ def main() -> None:
             "model": config.settings.openai_model,
             "prices": projection["prices"],
             "spend_cap_usd": args.cap,
-            "actual_spend_usd": round(meter.cost_usd, 4),
+            "actual_spend_usd": round(agent_meter.combined_cost_usd, 4),
+            "agent_spend_usd": round(agent_meter.cost_usd, 4),
+            "judge_spend_usd": round(judge_meter.cost_usd, 4),
             "estimate_usd": projection["total_usd"],
             "stopped_early": stopped_early,
             "bootstrap_iterations": 2000,
@@ -687,7 +732,10 @@ def main() -> None:
     out = Path(args.out) if args.out else _RESULTS_DIR / f"mode_comparison_{args.split}.json"
     out.write_text(json.dumps(results, indent=2, ensure_ascii=False), encoding="utf-8")
 
-    print(f"\nactual spend: ${meter.cost_usd:.4f} of ${args.cap:.2f} cap")
+    print(
+        f"\nspend: agent ${agent_meter.cost_usd:.4f} + judge ${judge_meter.cost_usd:.4f}"
+        f" = ${agent_meter.combined_cost_usd:.4f} of ${args.cap:.2f} cap"
+    )
     print(f"results: {out}")
 
 
