@@ -1,4 +1,4 @@
-# AgentIQ load test — Locust, local instance
+# AgentIQ load test: Locust, local instance
 
 Run with `tests/load/locustfile.py` against a local `uvicorn api.main:app`
 started with:
@@ -14,7 +14,7 @@ so the run costs nothing and hits no rate limits. `AGENTIQ_MOCK_FAIL_PCT=0.15`
 makes **15% of router calls emit a garbage route** (to exercise
 `sanitize_route`) and **15% of searches raise a transient error** (to
 exercise the retry + fallback path). Each Locust request uses a unique
-query suffix so the Redis response cache never serves a hit — these
+query suffix so the Redis response cache never serves a hit, these
 numbers are graph-execution under load, not cache-hit latency.
 
 Single uvicorn worker. Each level ran headless for 45s.
@@ -29,16 +29,16 @@ Single uvicorn worker. Each level ran headless for 45s.
 
 | Metric | Value |
 |---|---|
-| task_completion_rate | **1.000** — every request returned a usable answer, not the graceful error string |
-| invalid_tool_call_rate | **0.000** — with 15% of router outputs deliberately garbage, `sanitize_route` corrected 100% of them; none reached a tool |
-| tool_failure_recovery_rate | **1.000** (763/763 web_search turns across the three runs) — with 15% of searches failing transiently, every web_search turn still produced an answer via retry + fallback |
+| task_completion_rate | **1.000**: every request returned a usable answer, not the graceful error string |
+| invalid_tool_call_rate | **0.000**: with 15% of router outputs deliberately garbage, `sanitize_route` corrected 100% of them; none reached a tool |
+| tool_failure_recovery_rate | **1.000** (763/763 web_search turns across the three runs) - with 15% of searches failing transiently, every web_search turn still produced an answer via retry + fallback |
 
 **Reading the latency:** p50 ~97 ms is dominated by the mocked LLM's
-simulated inference sleep (~40–120 ms for the two calls a turn makes) plus
-FastAPI/graph overhead. The p99/max tail (~1.4–3.2 s) is the
+simulated inference sleep (~40 to 120 ms for the two calls a turn makes) plus
+FastAPI/graph overhead. The p99/max tail (~1.4 to 3.2 s) is the
 `wait_exponential_jitter(initial=0.5, max=4.0)` retry backoff on the
 injected 15% search failures. **This is not a real end-to-end latency
-number** — a real LLM adds 1–2 s per call. The value of this run is the
+number** - a real LLM adds 1 to 2 s per call. The value of this run is the
 throughput scaling (roughly linear 7 → 18 → 36 req/s, no errors) and the
 100% completion / 0% invalid-tool / 100% recovery rates under sustained
 concurrency.

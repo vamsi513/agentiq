@@ -17,6 +17,13 @@ The Postgres saver needs an event loop to build (open the pool, run
 (see api/main.py's lifespan). ``get_checkpointer()`` stays sync and just
 returns whatever's been initialised, defaulting to MemorySaver -- so
 scripts and tests that never call ``init_checkpointer()`` still work.
+
+Setting CHECKPOINT_DSN is a statement that checkpoints must be durable, so a
+failure to reach Postgres raises ``CheckpointerInitError`` and stops startup
+rather than quietly degrading to MemorySaver. Silently falling back is the
+worse failure: the service looks healthy, conversations look fine, and the
+durability that was explicitly asked for is gone until someone reads the logs.
+MemorySaver remains the default, with no error, when no DSN is configured.
 """
 
 import logging
@@ -28,6 +35,11 @@ from config import settings
 
 logger = logging.getLogger(__name__)
 
+
+class CheckpointerInitError(RuntimeError):
+    """Raised when CHECKPOINT_DSN is set but the Postgres checkpointer cannot
+    be initialised. Deliberately fatal: see the module docstring."""
+
 # ── Process-wide singleton ───────────────────────────────────────────────────
 _checkpointer = None
 _pg_pool = None
@@ -35,8 +47,16 @@ _pg_pool = None
 
 async def init_checkpointer():
     """Initialise the checkpointer, awaiting the async Postgres setup when
-    CHECKPOINT_DSN is configured. Idempotent. Falls back to MemorySaver if
-    Postgres is configured but unreachable."""
+    CHECKPOINT_DSN is configured. Idempotent.
+
+    Uses MemorySaver when no DSN is set. When a DSN *is* set and the saver
+    cannot be initialised, raises CheckpointerInitError instead of falling
+    back, so a deployment that asked for durable checkpoints fails loudly
+    rather than running without them.
+
+    Raises:
+        CheckpointerInitError: CHECKPOINT_DSN is set and setup failed.
+    """
     global _checkpointer, _pg_pool
     if _checkpointer is not None:
         return _checkpointer
@@ -61,13 +81,27 @@ async def init_checkpointer():
         await saver.setup()  # idempotent CREATE TABLE IF NOT EXISTS
         _checkpointer = saver
         logger.info("AsyncPostgresSaver initialised (durable checkpoints enabled).")
-    except Exception as exc:  # pragma: no cover - depends on a live DB
-        logger.warning(
-            "CHECKPOINT_DSN is set but the Postgres saver failed to init "
-            "(%s: %s); falling back to in-process MemorySaver.",
+    except Exception as exc:
+        # Close anything the failed attempt already opened, so a retry or a
+        # clean shutdown is not left holding a pool.
+        if _pg_pool is not None:
+            try:
+                await _pg_pool.close()
+            except Exception:  # pragma: no cover - best effort only
+                logger.debug("Closing the half-open checkpoint pool failed.", exc_info=True)
+            _pg_pool = None
+        _checkpointer = None
+        logger.error(
+            "CHECKPOINT_DSN is set but the Postgres checkpointer failed to "
+            "initialise (%s: %s).",
             type(exc).__name__, exc,
         )
-        _checkpointer = MemorySaver()
+        raise CheckpointerInitError(
+            "CHECKPOINT_DSN is set, so durable checkpoints are required, but the "
+            f"Postgres checkpointer could not be initialised ({type(exc).__name__}: {exc}). "
+            "Fix the database connection or unset CHECKPOINT_DSN to run with "
+            "in-process MemorySaver checkpoints."
+        ) from exc
     return _checkpointer
 
 
