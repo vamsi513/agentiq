@@ -45,9 +45,10 @@ structlog>=24.0
 # OpenTelemetry metrics -> Prometheus /metrics endpoint (observability/
 # metrics.py). Safe to ship everywhere: it only adds an endpoint and
 # some counters; nothing scrapes it unless a Prometheus is pointed at it.
-opentelemetry-sdk==1.44.0
-opentelemetry-instrumentation-fastapi==0.65b0
-opentelemetry-exporter-prometheus==0.65b0
+opentelemetry-api==1.45.1
+opentelemetry-sdk==1.45.1
+opentelemetry-instrumentation-fastapi==0.66b1
+opentelemetry-exporter-prometheus==0.66b1
 prometheus-client==0.26.0
 
 # ── Optional: durable checkpoints + response cache ─────────────────────
