@@ -129,6 +129,16 @@ _llm: ChatOpenAI | None = None
 _LLM_TIMEOUT_SECONDS = 30.0
 _LLM_MAX_RETRIES = 2
 
+# streaming=True makes the client use the streaming endpoint, and OpenAI omits
+# the usage block from a streamed response unless include_usage is requested.
+# Without this, usage_metadata comes back as None on every call, so
+# _charge_response_tokens charges nothing and BUDGET_MAX_TOKENS never fires
+# however many tokens a run actually spends. Verified against the installed
+# langchain-openai: usage_metadata is None without it and populated with it.
+# Passed through model_kwargs because stream_options is not a named parameter
+# on this version and setting it directly emits a warning.
+_STREAM_USAGE_KWARGS = {"stream_options": {"include_usage": True}}
+
 
 def _get_llm() -> ChatOpenAI:
     global _llm
@@ -144,6 +154,7 @@ def _get_llm() -> ChatOpenAI:
             streaming=True,
             timeout=_LLM_TIMEOUT_SECONDS,
             max_retries=_LLM_MAX_RETRIES,
+            model_kwargs=_STREAM_USAGE_KWARGS,
         )
     return _llm
 
@@ -250,6 +261,7 @@ def router_node(state: AgentState) -> dict[str, Any]:
                 {"role": "user", "content": f"Query: {query}"},
             ]
         )
+        _charge_response_tokens(response)
         decision_raw = response.content
         decision = sanitize_route(decision_raw)
         if decision != str(decision_raw).strip().lower():
@@ -283,6 +295,7 @@ def _rewrite_query(query: str) -> list[str]:
             f"Question: {query}"
         )
         response = llm.invoke([{"role": "user", "content": prompt}])
+        _charge_response_tokens(response)
         variants = [line.strip() for line in response.content.strip().splitlines() if line.strip()]
         return [query] + variants[:2]
     except Exception:
@@ -460,6 +473,7 @@ def direct_node(state: AgentState) -> dict[str, Any]:
 
     try:
         response = _get_llm().invoke(history)
+        _charge_response_tokens(response)
         current_turn = state.get("turn_count", 0)
         logger.info("Direct node produced answer (%d chars).", len(response.content))
         return {

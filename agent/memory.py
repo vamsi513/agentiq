@@ -151,6 +151,25 @@ def new_session_id() -> str:
 # process is killed. LangGraph's own default is 25.
 _RECURSION_LIMIT = 8
 
+# The multi agent graph returns to the supervisor between every agent, so one
+# turn costs far more super-steps than the linear DAG above: security, planner,
+# then a supervisor turn and an agent turn for each phase, then publish. The
+# longest intended path (research, write, verify, retry research, rewrite,
+# re-verify) is 16 super-steps, and the supervisor's own MAX_SUPERVISOR_STEPS
+# cap of 10 bounds the worst case at 23.
+#
+# 24 sits just above that worst case and just below LangGraph's default of 25.
+# The ordering is deliberate: the supervisor cap is reached first, so a run
+# that will not settle ends with a recorded stop_reason and a real answer
+# rather than with a GraphRecursionError. This limit is the backstop behind
+# that backstop, for a mis-wired edge the supervisor cannot see.
+_MULTI_RECURSION_LIMIT = 24
+
+
+def recursion_limit_for(mode: str) -> int:
+    """The super-step ceiling for one agent mode."""
+    return _MULTI_RECURSION_LIMIT if mode == "multi" else _RECURSION_LIMIT
+
 
 def get_thread_config(session_id: str) -> dict:
     """
@@ -158,7 +177,8 @@ def get_thread_config(session_id: str) -> dict:
 
     Pass the returned dict as the ``config`` argument to ``graph.invoke()``
     or ``graph.astream()`` to associate the run with a specific conversation
-    thread. Carries an explicit ``recursion_limit`` as a hard step cap.
+    thread. Carries an explicit ``recursion_limit`` as a hard step cap, sized
+    for whichever graph AGENT_MODE selects.
 
     Args:
         session_id: Stable identifier for the conversation session.
@@ -166,7 +186,9 @@ def get_thread_config(session_id: str) -> dict:
     Returns:
         Dict with ``recursion_limit`` and the ``configurable`` thread key.
     """
+    from config import settings
+
     return {
-        "recursion_limit": _RECURSION_LIMIT,
+        "recursion_limit": recursion_limit_for(settings.agent_mode),
         "configurable": {"thread_id": session_id},
     }

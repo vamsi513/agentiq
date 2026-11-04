@@ -131,6 +131,7 @@ def build_graph(checkpointer: MemorySaver | None = None):
 # ── Application-level singleton ───────────────────────────────────────────────
 
 _graph = None
+_graph_mode: str | None = None
 
 
 def get_graph():
@@ -139,11 +140,28 @@ def get_graph():
 
     Lazy-initialised on first call so imports don't trigger compilation.
 
+    Which graph is built depends on ``AGENT_MODE``: "single" (the default)
+    compiles the workflow above, "multi" compiles the planner/researcher/
+    verifier/writer graph in agent/multi/graph.py. The compiled graph is
+    cached per mode, so a test that flips the setting gets the graph it asked
+    for rather than whichever one was built first.
+
     Returns:
         Compiled LangGraph application with persistent memory.
     """
-    global _graph
-    if _graph is None:
+    global _graph, _graph_mode
+    from config import settings
+
+    mode = settings.agent_mode
+    if _graph is None or _graph_mode != mode:
         from agent.memory import get_checkpointer
-        _graph = build_graph(checkpointer=get_checkpointer())
+
+        checkpointer = get_checkpointer()
+        if mode == "multi":
+            from agent.multi.graph import build_multi_graph
+
+            _graph = build_multi_graph(checkpointer=checkpointer)
+        else:
+            _graph = build_graph(checkpointer=checkpointer)
+        _graph_mode = mode
     return _graph
